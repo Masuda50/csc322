@@ -207,7 +207,7 @@ body.loggedin {
 		padding-top: 10px;
 	}
 
-	#createPollForm {
+	#createPollForm, #createVoteForm {
 		margin: 0 auto;
 		display: none;
 	}
@@ -254,11 +254,11 @@ body.loggedin {
 		justify-content: space-around;
 	}
 
-	.pollOptions-container, .showPollResults-container {
+	.pollOptions-container, .showPollResults-container, .showGroupVoteResults-container {
 		display: none;
 	}
 
-	input[type="radio"], .poll-option-label {
+	input[type="radio"], .poll-option-label, .groupvote-option-label {
 		cursor: pointer;
 	}
 
@@ -305,6 +305,16 @@ body.loggedin {
 	  display: none;
 	  padding: 6px 12px;
 	  border-top: none;
+	}
+
+	/* CLOSE GROUP PAGE	*/
+	.close-group-form__container {
+		margin-top: 4%;
+		margin-bottom: 8%;
+	}
+
+	.ratings .far {
+		cursor: pointer;
 	}
 
 

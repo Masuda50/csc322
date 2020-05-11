@@ -8,12 +8,15 @@
 {% if not_in_group %}   <!-- if a user is a visitor or not in this group, only show public information-->
 
 <div class="content">
-            <h2>Group Page</h2>
+            <h2>
+                Group Page
+                {% if group_status == 'active' %}
+                    <span class="badge badge-primary">Active</span>
+                {% else %}
+                    <span class="badge badge-danger">Inactive</span>
+                {% endif %}
+            </h2>
                 <table>
-                    <tr>
-                        <td>Group Name:</td>
-                        <td>{{ group.group_name }}</td>
-                    </tr>
                     <tr>
                         <td>Group Created By:</td>
                         <td>{{ group.user_name }}</td>
@@ -31,7 +34,7 @@
                 </tr>
             </div>
 
-            <h2>Group members</h2>
+            <h6>Group members</h6>
                     <table>  <!-- show all group members in the list if exist in the Group_members DB-->
                     {% for name in group_members %}
                         <tr>
@@ -64,7 +67,15 @@
     <div class="left">            <!-- left side start-->
 
         <div class="content" style="width: 400px;height: 100%;">
-            <h2>Group Page</h2>
+            <h2>
+                Group Page
+                {% if group_status == 'active' %}
+                    <span class="badge badge-primary">Active</span>
+                {% else %}
+                    <span class="badge badge-danger">Inactive</span>
+                {% endif %}
+            </h2>
+
                 <table>
                     <tr>
                         <td>Group Name:</td>
@@ -89,20 +100,216 @@
             <hr>
 
  <div class="tab">
-        <button class="tablinks" onclick="openTab(event, 'Posts')">Posts</button>
         <button class="tablinks" onclick="openTab(event, 'Polls')" id="defaultOpen">Polls</button>
+        <button class="tablinks" onclick="openTab(event, 'GroupVotes')">Group Votes</button>
+        <button class="tablinks" onclick="openTab(event, 'UserPoints')">User Points</button>
     </div>
 
-    <div id="Posts" class="tabcontent">
-        <p>I am a post section</p>
+    <div id="GroupVotes" class="tabcontent">
+        {#   Create Group Vote form     #}
+        <div class="poll-parent-container container" style="padding: 0;">
+            {% if group_status == 'active' %}
+                <button type="button" class="btn btn-info" onClick="toggleVoteForm()" style="position:relative;
+                             right:110px;">Create Group Vote</button>
+            {% endif %}
+
+            <div class="row poll-form-container d-flex col-md-6 mx-auto" id="VoteFormContainer" style="padding: 0;">
+                <div class="poll-form-content col-md-12" style="width: 800px; padding: 0;
+                position:relative; right:120px; padding-top: 10px">
+                    <form id="createVoteForm" class="col-md-8" action="{{ url_for('create_groupvote', group_name=group.group_name) }}" method="POST">
+                        <div class="form-input-content" id="VoteInputContent" style="width: 320px; padding: 0">
+                            <div class="form-group">
+                                <input type="text" class="form-control" id="groupvote-title" name="groupvote-title" placeholder="Group Vote Title" required>
+                            </div>
+
+                            <div class="form-group">
+                              <select class="form-control" name="voteType" onchange="selectGroupVoteType(this);">
+                                  <option selected>Choose Vote Type...</option>
+                                  <option class="voteType-user" name="vote-type" value="praise">Praise a User</option>
+                                  <option class="voteType-user" name="vote-type" value="warning">Give User a Warning</option>
+                                  <option class="voteType-user" name="vote-type" value="user_removal">Remove a User from Group</option>
+                                  <option class="voteType-group" name="vote-type" value="close_group">Close Group</option>
+                              </select>
+                            </div>
+
+                            <div class="form-group">
+                                <div id="form-group__user" style="display:none;">
+                                    <input type="text" class="form-control" id="user_subject" name="user-subject" placeholder="Which User?">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="btnContainer">
+                            <div class="text-align">
+                                <button type="submit" class="btn btn-primary">Create</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+{% if group_votes %}
+            <h5 class="text-center">Current Group Votes</h5>
+            {% for group_vote in group_votes %}
+                <div class="container col-md-12 mx-auto">
+                        <div class="card">
+                          <div class="card-header">
+                                {% if group_vote.vote_subject  == 'close_group' %}
+                                    <p class="card-title">Vote to Close Group</p>
+                                {% endif %}
+                              {% if group_vote.vote_subject == 'praise' %}
+                                <h6 class="card-title">Vote on User Praise</h6>
+                              {% endif %}
+
+                              {% if group_vote.vote_subject == 'warning' %}
+                                  <h6 class="card-title">Vote on User Warning</h6>
+                              {% endif %}
+
+                              {% if group_vote.vote_subject == 'user_removal' %}
+                                <h6 class="card-title">Vote to Remove User</h6>
+                              {% endif %}
+                          </div>
+                            <div class="row card-content__container">
+                              <div class="card-body float-left">
+                                {% if group_vote.vote_subject  == 'close_group' %}
+                                    <p class="card-body">Would you like to close the group?</p>
+                                {% endif %}
+                                {% if group_vote.vote_subject == 'praise' %}
+                                    <p class="card-body">Would you like to give&nbsp<b>{{ group_vote.user_subject }}</b>&nbsppraise?</p>
+                                {% endif %}
+
+                                {% if group_vote.vote_subject == 'warning' %}
+                                    <p class="card-body">Would you like to give&nbsp<b>{{ group_vote.user_subject }}</b>&nbspa warning?</p>
+                                {% endif %}
+
+                                {% if group_vote.vote_subject == 'user_removal' %}
+                                  <p class="card-body">Would you like to remove&nbsp<b>{{ group_vote.user_subject }}</b>&nbspfrom the group?</p>
+                                {% endif %}
+                              </div>
+                              <div class="card-body float-right">
+                                  {% if group_status == 'active' %}
+                                    <button type="button" class="btn btn-primary submitPoll-btn">Respond</button>
+                                  {% endif %}
+                              </div>
+                            </div>
+
+                            <form action="{{ url_for('groupvote_response', group_id=group.group_id, group_vote_id=group_vote.group_vote_id) }}" method="post">
+                                    <div class="pollOptions-container row">
+                                        <div class="pollOptions-content container text-center">
+                                                <div class="row pollOptions-option__parent">
+                                                    <div class="pollOptions-option radio col-lg-12 text-center">
+                                                        <input type="radio" id="yes-option-{{ group_vote.group_vote_id }}"  name="groupvote-option" value="Yes">
+                                                        <label class="groupvote-option-label" for="yes-option-{{ group_vote.group_vote_id }}" >Yes</label>
+                                                    </div>
+                                                    <div class="pollOptions-option radio col-lg-12">
+                                                        <input type="radio" id="no-option-{{ group_vote.group_vote_id }}" name="groupvote-option" value="No">
+                                                        <label class="groupvote-option-label" for="no-option-{{ group_vote.group_vote_id }}">No</label>
+                                                    </div>
+                                                </div>
+
+                                            <div class="pollOptions-btn text-center">
+                                                <button type="submit" class="btn btn-warning" name="submit-groupvote">Vote</button>
+                                            </div>
+                                            </div>
+                                    </div>
+                            </form>
+                        </div>
+
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% if voted_group_votes %}
+            <h5 class="text-center">My Responded Group Votes</h5>
+            {% for group_vote in voted_group_votes %}
+                <div class="container col-md-12 mx-auto">
+                    <div class="card">
+                      <div class="card-header">
+                            {% if group_vote.vote_subject  == 'close_group' %}
+                                <h6 class="card-title">Decision to Close Group</h6>
+                            {% endif %}
+                            {% if group_vote.vote_subject == 'praise' %}
+                                <h6 class="card-title">Vote on User Praise</h6>
+                              {% endif %}
+
+                              {% if group_vote.vote_subject == 'warning' %}
+                                  <h6 class="card-title">Vote on User Warning</h6>
+                              {% endif %}
+
+                              {% if group_vote.vote_subject == 'user_removal' %}
+                                <h6 class="card-title">Vote to Remove User</h6>
+                              {% endif %}
+                      </div>
+                        <div class="row">
+                          <div class="card-body">
+                                {% if group_vote.vote_subject  == 'close_group' %}
+                                    <p class="card-body">Would you like to close the group?</p>
+                                {% endif %}
+                                {% if group_vote.vote_subject == 'praise' %}
+                                    <p class="card-body">Would you like to give&nbsp<b>{{ group_vote.user_subject }}</b>&nbsppraise?</p>
+                                {% endif %}
+
+                                {% if group_vote.vote_subject == 'warning' %}
+                                    <p class="card-body">Would you like to give&nbsp<b>{{ group_vote.user_subject }}</b>&nbspa warning?</p>
+                                {% endif %}
+
+                                {% if group_vote.vote_subject == 'user_removal' %}
+                                  <p class="card-body">Would you like to remove&nbsp<b>{{ group_vote.user_subject }}</b>&nbspfrom the group?</p>
+                                {% endif %}
+                          </div>
+                          <div class="card-body">
+                              <button type="button" class="btn btn-warning showGroupVoteResults-btn" onClick="">Show Results</button>
+                          </div>
+                        </div>
+
+                                <div class="showGroupVoteResults-container row">
+                                    <div class="showPollResults-content container text-center">
+                                            <div class="row">
+                                                <div class="pollOptions-option radio col-lg-6">
+                                                    <b>Highest Vote:</b>
+                                                    {% if group_vote.vote_count <= 1 %}
+                                                        <p>Not enough votes...</p>
+
+                                                    {% else %}
+                                                    <p>{{ group_vote.highest_vote }} <span class="badge badge-warning"> {{ group_vote.vote_count }}</span></p>
+                                                    {% endif %}
+                                                </div>
+
+                                                <div class="pollOptions-option radio col-lg-6">
+                                                    <b>Your Vote:</b>
+                                                    <p>{{ group_vote.vote_response }}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                </div>
+                    </div>
+
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        </div>
     </div>
 
+    <div id="UserPoints" class="tabcontent">
+        {% if member_points %}
+            {% for member in member_points %}
+                <div class="row" style="width: 300px;">
+                    <div class="member-point-info card text-center col-lg-6">
+                        <p>User: {{ member.user_id.user_name }}</p>
+                        <p>Warnings: {{ member.user_warnings }}</p>
+                        <p>Praises: {{ member.user_praises }}</p>
+                    </div>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
 
     <div id="Polls" class="tabcontent">
         {#  Create Poll Form  #}
         <div class="poll-parent-container container" style="padding: 0;">
-        <button type="button" class="btn btn-info" onClick="togglePollForm()" style="position:relative;
+            {% if group_status == 'active' %}
+                <button type="button" class="btn btn-info" onClick="togglePollForm()" style="position:relative;
                              right:140px;">Create Poll</button>
+            {% endif %}
 
             <div class="row poll-form-container d-flex col-md-6 mx-auto" id="pollFormContainer"
                  style="padding: 0;">
@@ -149,7 +356,9 @@
                             <p class="card-text">{{ poll.poll_body }}</p>
                           </div>
                           <div class="card-body float-right" style="position:relative; left:20px;">
-                              <button type="button" class="btn btn-primary submitPoll-btn" onClick="">Respond</button>
+                              {% if group_status == 'active' %}
+                                <button type="button" class="btn btn-primary submitPoll-btn" onClick="">Respond</button>
+                              {% endif %}
                           </div>
                         </div>
 
@@ -203,7 +412,17 @@
                                 <div class="showPollResults-container row">
                                     <div class="showPollResults-content container text-center">
                                             <div class="row">
-                                                <div class="pollOptions-option radio col-lg-4">
+                                                <div class="pollOptions-option radio col-lg-6">
+                                                    <b>Highest Vote:</b>
+                                                    {% if poll.vote_count <= 1 %}
+                                                        <p>Not enough votes...</p>
+
+                                                    {% else %}
+                                                    <p>{{ poll.highest_vote }} <span class="badge badge-warning"> {{ poll.vote_count }}</span></p>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="pollOptions-option radio col-lg-6">
+                                                    <b>Your Vote:</b>
                                                     <p>{{ poll.optionText }}</p>
                                                 </div>
                                             </div>
@@ -220,9 +439,11 @@
 
     var pollOption = document.getElementsByClassName('pollOptions-container');
     var showPollResults = document.getElementsByClassName('showPollResults-container');
+    var showGroupVoteResults = document.getElementsByClassName('showGroupVoteResults-container');
     /** get respond button index **/
     var submitPollBtn = document.getElementsByClassName('submitPoll-btn');
     var showPollResultsBtn = document.getElementsByClassName('showPollResults-btn');
+    var showGroupVoteResultsBtn = document.getElementsByClassName('showGroupVoteResults-btn');
 
     for(var i = 0; i < pollOption.length; i++){
         pollOption[i].style.display = 'none';
@@ -230,6 +451,10 @@
 
     for(var i = 0; i < showPollResults.length; i++){
         showPollResults[i].style.display = 'none';
+    }
+
+    for(var i = 0; i < showGroupVoteResults.length; i++){
+        showGroupVoteResults[i].style.display = 'none';
     }
 
     for (var i = 0; i < submitPollBtn.length; i++) {
@@ -288,6 +513,34 @@
             })(i);
         }
 
+        for (var i = 0; i < showGroupVoteResultsBtn.length; i++) {
+            (function (i) {
+                showGroupVoteResultsBtn[i].addEventListener('click', function (event) {
+                    {#console.log(i);#}
+                    {#console.log(pollOption[i]);#}
+                    console.log(showGroupVoteResultsBtn[i]);
+
+                    if (showGroupVoteResults[i].style.display === ''){
+                        showGroupVoteResults[i].style.display = 'none';
+                    }
+                    if (showGroupVoteResults[i].style.display === "none") {
+                        showGroupVoteResults[i].style.display = "block";
+                    } else {
+                        showGroupVoteResults[i].style.display = "none";
+                    }
+                    if(showGroupVoteResultsBtn[i].innerHTML === ''){
+                        showGroupVoteResultsBtn[i].innerHTML = 'Show Results';
+                    }
+                    if(showGroupVoteResultsBtn[i].innerHTML === 'Show Results'){
+                        showGroupVoteResultsBtn[i].innerHTML = 'Hide';
+                    } else {
+                        showGroupVoteResultsBtn[i].innerHTML = 'Show Results';
+                    }
+
+                }, false);
+            })(i);
+        }
+
 
     function togglePollForm() {
 
@@ -301,6 +554,35 @@
             x.style.display = "none";
         }
 
+    }
+
+    function toggleVoteForm() {
+        var x = document.getElementById("createVoteForm");
+        if (x.style.display === ''){
+            x.style.display = 'none';
+        }
+        if (x.style.display === "none") {
+            x.style.display = "block";
+        } else {
+            x.style.display = "none";
+        }
+    }
+
+    function selectGroupVoteType(nameSelect)
+    {
+        console.log(nameSelect);
+        if(nameSelect){
+            console.log(nameSelect.value);
+            if(nameSelect.value == 'praise' || nameSelect.value == 'warning' || nameSelect.value == 'user_removal'){
+                document.getElementById("form-group__user").style.display = "block";
+            }
+            else{
+                document.getElementById("form-group__user").style.display = "none";
+            }
+        }
+        else{
+            document.getElementById("form-group__user").style.display = "none";
+        }
     }
 
 
@@ -338,7 +620,7 @@
                     {% for name in group_members %}
                     <tr>
                         <td><a href="{{ url_for('poster_profile', poster_id=name.user_id) }}">
-                             <button class="btn btn-primary" style="font-size: 20px; width: 200px;
+                             <button class="btn btn-primary" style="font-size: 16px; width: 100px;
                          margin:10px; word-break: break-all; height: 50px; ">{{ name.user_name }}</button></a></td>
                     </tr>
                     {% endfor %}
@@ -346,9 +628,11 @@
                 <!-- invite button-->
                 <tr>
                     <td>
+                {% if group_status == 'active' %}
                 <button class="btn btn-primary btn-lg" data-toggle="modal" data-target="#myModal"
                         style="font-size: 20px; width: 200px; margin:10px; word-break: break-all; height: 50px; ">
-                   十 Invite People</button>   <!-- invite button-->
+                   + Invite People</button>   <!-- invite button-->
+                {% endif %}
                 <form action="{{ url_for('invite', group_id=group.group_id) }}" method="post">
                     <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
                          aria-hidden="true">
@@ -402,6 +686,7 @@
                     <main style="padding-bottom: 100px;" ></main>
                     <footer style="line-height: 100px; height: 75px; width: 100%; position: absolute; bottom: 0;" >
                         <hr>
+                        {% if group_status == 'active' %}
                         <form action="{{ url_for('chat',group_id=group.group_id) }}" method="post" autocomplete="off">
                 <div class="form-container" style="margin: 10px; width: 730px;">
                     <div class="form-group">
@@ -413,11 +698,16 @@
                         </div>
                 </div>
             </form>
+            {% endif %}
+
                     </footer>
 
           </div>
 
+
         </div>
+
+
 </div>
                         {% endif %}   <!-- end -->
 {% endblock %}
