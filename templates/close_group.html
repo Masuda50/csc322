@@ -26,7 +26,8 @@
     {% else %}
     <div class="content">
         <h2 class="text-center">Close Group Evaluation</h2>
-        <form action="{{ url_for('close_group', group_id=group_id) }}" method="post" id="closeGroupForm">
+{#    action="{{ url_for('close_group', group_id=group_id) }}" #}
+        <form  id="closeGroupForm">
             <div class="close-group-form__container container text-center">
                 <div class="row">
                     <div class="close-group-form__content col-lg-12">
@@ -59,14 +60,31 @@
 
                              <label for="user-rating">Rate Your Group Mate</label>
                              <p> {{ user.user_name }}</p>
-                             <input type="text" class="form-control" id="user-rating" placeholder="">
+                        <form>
+                        <div class="row pollOptions-option__parent">
+                            <div class="radio col-lg-12 text-center">
+                                <input type="radio" id="add-to-whitelist-{{ user.user_id }}"  name="wb-bb-option" value="Whitelist">
+                                <label class="groupvote-option-label" for="add-to-whitelist-{{ user.user_id }}" >Add to White List</label>
+                            </div>
+                            <div class="radio col-lg-12">
+                                <input type="radio" id="add-to-blacklist-{{ user.user_id }}" name="wb-bb-option" value="Blacklist">
+                                <label class="groupvote-option-label" for="add-to-blacklist-{{ user.user_id }}">Add to Black List</label>
+                            </div>
+                            <div class="radio col-lg-12">
+                                <input type="radio" id="skip-lists-{{ user.user_id }}" name="wb-bb-option" value="Skip">
+                                <label class="groupvote-option-label" for="skip-lists-{{ user.user_id }}">Skip</label>
+                            </div>
+                        </div>
+                            </form>
+
+
                         </div>
                     {% endfor %}
 
                 </div>
 
                 <div class="container text-center">
-                        <button type="submit" class="btn btn-primary">Close Group</button>
+                        <button type="submit" class="btn btn-primary" name="submit-closeEvalForm">Close Group</button>
                 </div>
             </div>
         </form>
@@ -78,6 +96,8 @@
     const starRating = document.querySelectorAll('.ratings');
 
     let userRating = {};
+
+
 
     for(let i = 0; i < starRating.length; i++){
         for(let j = 0; j < starRating[i].children.length; j++){
@@ -111,9 +131,16 @@
         }
     }
 
-
     $('#closeGroupForm').submit(function(){
        event.preventDefault();
+       let wbBBOptions = [];
+       let checkboxes = $('input[name="wb-bb-option"]:checked').map(function() {
+          alert( $(this).val());
+          wbBBOptions.push($(this).val());
+        })
+
+       alert(wbBBOptions)
+
         //send userRating data array to flask route for data handling
         $.ajax({
             url: '/group/{{ group_id }}/close',
@@ -122,17 +149,21 @@
             data: JSON.stringify({
                 openReason: $('#open_reason').val(),
                 closeReason: $('#close_reason').val(),
-                userRatings: userRating
+                userRatings: userRating,
+                wbBBOptions: wbBBOptions
             }),
             success: function(response){
                 console.log(response.url);
                 window.location.href = response.url
             },
             error: function(response){
-                alert(response);
+                alert('Error!');
+                console.log(response);
             }
         });
 
+
     });
+
     </script>
 {% endblock %}

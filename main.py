@@ -796,8 +796,8 @@ def into_group(group_id):
     # cursor.execute('SELECT user_praises, user_warnings from tb_group_members where')
     group_member_points = []
     for i in range(0, len(group_members)):
-        cursor.execute('SELECT user_id, user_praises, user_warnings from tb_group_members where user_id = %s',
-                       (group_members[i]['user_id'],))
+        cursor.execute('SELECT user_id, user_praises, user_warnings from tb_group_members where user_id = %s and group_id = %s',
+                       (group_members[i]['user_id'], group_id,))
         member_points = cursor.fetchone()
         group_member_points.append(member_points)
 
@@ -867,8 +867,10 @@ def into_group(group_id):
         # =========================Group Vote=============================
 
     # get all unresponded user group votes
-    cursor.execute('select group_vote_id, vote_subject, user_subject, user_id from tb_group_votes where (group_vote_id not in (select group_vote_id from tb_group_vote_responses where group_id = %s and voter_id = %s) and group_vote_status = %s)',(group_id, session['user_id'], 'open',))
+    cursor.execute('select group_vote_id, vote_subject, user_subject, user_id from tb_group_votes where (group_vote_id not in (select group_vote_id from tb_group_vote_responses where group_id = %s and voter_id = %s) and group_vote_status = %s and group_id=%s)',(group_id, session['user_id'], 'open', group_id))
     all_group_votes = cursor.fetchall()
+    print('----------ALL UNRESPONDED GROUP VOTES---------')
+    print(all_group_votes)
 
     user_subject_username = []
     # for all user_subject in group_votes get user_name
@@ -952,8 +954,8 @@ def into_group(group_id):
                     print(group_vote['user_subject'], ' will get a ', group_vote['vote_subject'])
                     if group_vote['vote_subject'] == 'praise' and group_vote['group_vote_status'] == 'open':
                         # update user praise points
-                        cursor.execute('UPDATE tb_group_members SET user_praises = user_praises + 1 where user_id = %s',
-                                       (user_id,))
+                        cursor.execute('UPDATE tb_group_members SET user_praises = user_praises + 1 where user_id = %s and group_id=%s',
+                                       (user_id, group_id,))
                         cursor.execute('UPDATE tb_group_votes SET group_vote_status = %s WHERE group_vote_id = %s',
                                        ('closed', group_vote['group_vote_id']))
                         # save to db
@@ -1311,6 +1313,8 @@ def close_group(group_id):
         open_reason = request.json['openReason']
         close_reason = request.json['closeReason']
         userRatings = request.json['userRatings']
+        wb_bb_response = request.json['wbBBOptions']
+        print('White/Black list options: ', wb_bb_response)
 
         print(request.json)
         result = {'url': url_for('home')}
@@ -1325,16 +1329,38 @@ def close_group(group_id):
             print(group_members[i]['user_name'], userRatings[str(i)])
             cursor.execute('INSERT INTO tb_user_evaluations (group_id, rater_id, evaluation_score, user_id) VALUES (%s, %s, %s, %s)', (group_id, session['user_id'], userRatings[str(i)], group_members[i]['user_id']))
 
+            # if wb_bb_response == 'Whitelist' add user to whitebox
+            if wb_bb_response[i] == 'Whitelist':
+                # check if user already exists in whitelist
+                cursor.execute('SELECT * from tb_whitelist WHERE user_name_friend = %s AND user_id = %s', (group_members[i]['user_name'], session['user_id'],))
+                user_wb_exist = cursor.fetchone
+                print(user_wb_exist)
 
-        # set group_status in tb_group given group_name to 'inactive'
-        # cursor.execute('UPDATE tb_group SET group_status = %s WHERE group_id = %s', ('inactive', group_id,))
+                # check if user exists in blacklist
+                cursor.execute('SELECT * from tb_user_blacklist WHERE user_name_blocked = %s', (group_members[i]['user_name'],))
+                user_bb_exist = cursor.fetchone()
 
-        # insert project evaluation into tb_project_evaluations
-        cursor.execute('INSERT INTO tb_project_evaluations (project_open_reason, project_close_reason, group_id) VALUES (%s, %s, %s)', (open_reason, close_reason, group_id,))
+                # if user_bb_exist:
+                #     # remove from user_id from blacklist and add to whitelist
+                #     cursor.execute('DELETE FROM tb_user_blacklist WHERE user_name_blocked = %s', (group_members[i]['user_name'],))
 
-        mysql.connection.commit();
+                if user_wb_exist:
+                    print('User already exists in the Whitelist')
+                else:
+                    print('Inserting into rated user into whitelist!!')
+                    cursor.execute('INSERT INTO tb_whitelist (user_id, user_name_friend) VALUES (%s, %s)', (session['user_id'], group_members[i]['user_name'],))
+                    mysql.connection.commit();
 
-        return jsonify(result)
+
+            # set group_status in tb_group given group_name to 'inactive'
+            # cursor.execute('UPDATE tb_group SET group_status = %s WHERE group_id = %s', ('inactive', group_id,))
+
+            # insert project evaluation into tb_project_evaluations
+            cursor.execute('INSERT INTO tb_project_evaluations (project_open_reason, project_close_reason, group_id) VALUES (%s, %s, %s)', (open_reason, close_reason, group_id,))
+
+            mysql.connection.commit();
+
+            return jsonify(result)
 
     return render_template('close_group.html', group_id=group_id, group_members=group_members)
 
