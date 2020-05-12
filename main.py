@@ -32,7 +32,7 @@ app.secret_key = '111'
 # Enter your database connection details below
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = '111111'
+app.config['MYSQL_PASSWORD'] = 'Bang1adesh'
 app.config['MYSQL_DB'] = 'csc322_project'
 
 # Intialize MySQL
@@ -55,7 +55,11 @@ def admin_login_required(func):  # admin login required decorator
 
     @wraps(func)
     def wrapper(*args, **kwargs):
-        if session.get('user_id') and session.get('username') == 'admin':
+        user_id = session.get('user_id')
+        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+        cursor.execute('SELECT tb_profile.*, tb_user.user_id FROM tb_user INNER JOIN tb_profile ON tb_profile.user_id = tb_user.user_id WHERE tb_user.user_id = %s ',(user_id,))
+        issuper = cursor.fetchone() 
+        if issuper and issuper['user_type'] == 'SuperUser':
             return func(*args, **kwargs)
         else:
             return redirect(url_for('login'))
@@ -63,7 +67,12 @@ def admin_login_required(func):  # admin login required decorator
     return wrapper
 
 
-@app.route("/admin", methods=['get', 'post'])  # admin adding or deleting accounts
+@app.route("/Administration", methods=['GET', 'POST'])  
+@admin_login_required  
+def listofAdminpages():
+    return render_template('admin.html')
+
+@app.route("/pend", methods=['GET', 'POST'])  # admin adding or deleting accounts
 @admin_login_required  # must be logged in as admin to access this page!
 def admin():
     if request.method == 'POST':
@@ -74,6 +83,7 @@ def admin():
             email = request.form['email']
             interest = request.form['interest']
             credential = request.form['credential']
+            reference = request.form['reference']
             user_password = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(10)])
             cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
             # check to see if account already exist by email or user_name
@@ -81,8 +91,8 @@ def admin():
             account = cursor.fetchone()
             # if it doesnt insert into db
             if not account:
-                cursor.execute("INSERT INTO tb_user (user_name, user_password, email, credential, interest)"
-                               " VALUES (%s, %s, %s, %s, %s)", (user_name, user_password, email, credential, interest))
+                cursor.execute("INSERT INTO tb_user (user_name, user_password, email, credential, reference, interest)"
+                               " VALUES (%s, %s, %s, %s,%s, %s)", (user_name, user_password, email, credential, reference, interest))
                 # send email depending if it is an appeal or first time application
                 if request.form['message'] == "NONE":
                     welcome = user_name + " your Whiteboard application has been approved and your account has been" \
@@ -112,7 +122,7 @@ def admin():
                 reject = username + " We are sorry to say, your Whiteboard appeal has not been approved"
                 # put them into the blacklist if it is an appeal
                 cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-                cursor.execute("INSERT INTO tb_blacklist (email)" "VALUES (%s)", (email,))
+                cursor.execute("INSERT INTO tb_blacklist (email, lastlogin)" "VALUES (%s,%s)", (email,'0'))
                 mysql.connection.commit()
             msg = Message("Thank you for applying", recipients=[email])
             msg.body = reject
@@ -129,8 +139,8 @@ def admin():
     # Fetch all post records and return result
     applied = cursor.fetchall()
     if applied:
-        return render_template('admin.html', applied=applied)
-    return render_template('admin.html')
+        return render_template('pending.html', applied=applied)
+    return render_template('pending.html')
 
 
 # page where they can reset the password
@@ -293,28 +303,48 @@ def login():
         account = cursor.fetchone()
         # If account exists in accounts table in out database
         if account:
-            # Create session data, we can access this data in other routes
-            session['loggedin'] = True
-            session['user_id'] = account['user_id']
-            session['username'] = account['user_name']
-            # check if user is a new user
-            cursor.execute('SELECT * FROM tb_profile WHERE user_id = %s', [session['user_id']])
-            # if user is not a new user
-            user_exist = cursor.fetchone()
-            if user_exist:
+            #check if in blacklist 
+            cursor.execute('SELECT * FROM tb_blacklist WHERE email = %s',(email,))
+            blacklist = cursor.fetchone()
+            if not blacklist or blacklist['lastlogin'] == 1:
+                if blacklist:
+                    cursor.execute("UPDATE tb_blacklist SET lastlogin = %s WHERE email= %s" , ('0', email))
+                    mysql.connection.commit()
+                # Create session data, we can access this data in other routes
+                session['loggedin'] = True
+                session['user_id'] = account['user_id']
+                session['username'] = account['user_name']
+                # check if user is a new user
+                cursor.execute('SELECT * FROM tb_profile WHERE user_id = %s', [session['user_id']])
+                # if user is not a new user
+                user_exist = cursor.fetchone()
+                if user_exist:
+                    # go profile page
+                    if account['didtheychangepass'] == 0:
+                        return (redirect(url_for("reset_password")))
+                    else:
+                        return redirect(url_for('profile'))
+                #get their score 
+                cursor.execute('SELECT user_id FROM tb_user WHERE user_name = %s',([account['reference']],))
+                exist = cursor.fetchone()
+                if exist:
+                    cursor.execute('SELECT user_type FROM tb_profile WHERE user_id = %s',(exist['user_id'],))
+                    user = cursor.fetchone()
+                    if user['user_type'] == 'Ordinary': 
+                        cursor.execute('INSERT INTO tb_profile (user_id, user_scores) VALUES (%s,%s)', ([session['user_id']],'10'))
+                        mysql.connection.commit()
+                    else:
+                        cursor.execute('INSERT INTO tb_profile (user_id, user_scores) VALUES (%s,%s)', ([session['user_id']],'20'))
+                        mysql.connection.commit()
+                else:
+                    # otherwise insert data into table profile: user_id, user_type, user_status, user_scores
+                    cursor.execute('INSERT INTO tb_profile (user_id) VALUES (%s)', [session['user_id']])
+                    mysql.connection.commit()
                 # go profile page
                 if account['didtheychangepass'] == 0:
-                    return (redirect(url_for("reset_password")))
+                    return redirect(url_for("reset_password"))
                 else:
                     return redirect(url_for('profile'))
-            # otherwise insert data into table profile: user_id, user_type, user_status, user_scores
-            cursor.execute('INSERT INTO tb_profile (user_id) VALUES (%s)', [session['user_id']])
-            mysql.connection.commit()
-            # go profile page
-            if account['didtheychangepass'] == 0:
-                return redirect(url_for("reset_password"))
-            else:
-                return redirect(url_for('profile'))
         else:
             # Account doesnt exist or username/password incorrect
             msg = 'Incorrect email/password!'
@@ -343,8 +373,10 @@ def register():
         account = cursor.fetchone()
         cursor.execute('SELECT * FROM tb_applied WHERE email = %s OR username = %s', (email, username))
         application = cursor.fetchone()
+        cursor.execute('SELECT * FROM tb_blacklist WHERE email = %s', (email,))
+        blacklist = cursor.fetchone()
         # If account doesnt exists show error and validation checks
-        if account or application:
+        if account or application or blacklist:
             msg = 'Invalid Email or Username!'
         elif not re.match(r'[^@]+@[^@]+\.[^@]+', email):
             msg = 'Invalid email address!'
@@ -441,7 +473,7 @@ def profile():
                     # if not then insert it into the correct list
                     if not exist and not otherlist:
                         cursor.execute("INSERT INTO tb_whitelist (user_id, user_name_friend)" "VALUES (%s,%s)",
-                                       ([session['user_id']], user_whitelist))
+                                       ([session['user_id']], user_name_exist['user_name']))
                         mysql.connection.commit()
 
             # user adding into the black list
@@ -465,7 +497,9 @@ def profile():
                     # if not put them into the list
                     if not exist and not otherlist:
                         cursor.execute("INSERT INTO tb_user_blacklist (user_id, user_name_blocked)" "VALUES (%s,%s)",
-                                       ([session['user_id']], user_blacklist))
+                                       ([session['user_id']], user_name_exist['user_name']))
+                        mysql.connection.commit()
+
                         # We need all the account info for the user so we can display it on the profile page
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
         # join table profile and table user to get user information: id, name, email, user_type, user_scores,
@@ -500,9 +534,18 @@ def profile():
 
 
 # this will be the poster_file page
-@app.route('/poster_profile/<poster_id>')
+@app.route('/poster_profile/<poster_id>', methods = ['POST','GET'])
 # @login_required
 def poster_profile(poster_id):
+
+    if request.method =="POST":
+        compliment_content = request.form['content']
+        compliment_sender = session.get('user_id')
+        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+        cursor.execute("INSERT INTO tb_compliments (compliment_sender, compliment_content, compliment_getter)" "VALUES (%s,%s,%s)", 
+            (compliment_sender, compliment_content,poster_id))
+        mysql.connection.commit()
+
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     # join table user and table profile to get the poster information: id, name, email, user_type, user_scores
     cursor.execute('SELECT tb_profile.*, tb_user.user_name, tb_user.email, tb_user.user_id'
@@ -821,6 +864,78 @@ def poll_vote(group_id):
                                                     poll_option_details[0]['option_id'], session['user_id']))
             mysql.connection.commit()
             return redirect(url_for('into_group', group_id=group_id))
+
+@app.route('/message', methods=['GET','POST'])
+def messageSU():
+    if request.method == 'POST':
+        message_name = request.form['name']
+        message_content = request.form['content']
+        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+        cursor.execute("INSERT INTO tb_message_su (message_name, message_content)"
+                           " VALUES (%s, %s)", (message_name,message_content))
+        mysql.connection.commit()
+        return render_template('message.html', msg="SENT")
+    return render_template('message.html')
+
+@app.route("/adminMessages", methods=['GET','POST'])
+@admin_login_required
+def adminMessages():
+    if request.method == 'POST':
+        if "Deletemessage" in request.form:
+            message_id = request.form['message_id']
+            cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+            cursor.execute('DELETE FROM tb_message_su WHERE message_id = %s', (message_id))
+            mysql.connection.commit()
+        elif "Deletecompliment" in request.form:
+            compliment = request.form['compliment_id']
+            cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+            cursor.execute('DELETE FROM tb_compliments WHERE compliment_id = %s', (compliment))
+            mysql.connection.commit()
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute('SELECT * FROM tb_message_su')
+    # Fetch all post records and return result
+    messages = cursor.fetchall()
+    cursor.execute('SELECT * FROM tb_compliments')
+    compliments = cursor.fetchall()
+    if messages or compliments:
+        return render_template('adminMessages.html', messages=messages, compliments=compliments)
+    return render_template('adminMessages.html')
+
+
+
+@app.route("/allUsers", methods=['GET', 'POST'])
+@admin_login_required
+def adminEdit():
+    if request.method == "POST":
+        if "Submit" in request.form:
+            user_id = request.form['user_id']
+            user_scores = int(request.form['user_scores'])
+            score = int(request.form['score'])
+            insert = user_scores + score
+            cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+            cursor.execute('UPDATE tb_profile SET user_scores = %s WHERE user_id = %s',
+                           (insert, user_id))
+            mysql.connection.commit()
+        elif 'Blacklist' in request.form:
+            user_id = request.form['user_id']
+            email = request.form['email']
+            cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+            cursor.execute('UPDATE tb_profile SET user_status = %s WHERE user_id = %s',
+                           ('\x00', user_id))
+            cursor.execute("INSERT INTO tb_blacklist (email)" "VALUES (%s)", (email,))
+            mysql.connection.commit()
+            msg = Message("We are sorry to see you go!", recipients=[email])
+            msg.body = "Due to your behaviour, you have been blacklisted. You have one login left for you process before you are locked out from Whiteboard forever."
+            mail.send(msg)
+        #need to take care of group closings
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute('SELECT tb_profile.*, tb_user.user_name, tb_user.email'
+                       ' FROM tb_user INNER JOIN tb_profile ON tb_profile.user_id = tb_user.user_id')
+    all_accounts = cursor.fetchall()
+    cursor.execute("SELECT * FROM tb_group")
+    all_groups = cursor.fetchall()
+    return render_template("allUsers.html", all_accounts=all_accounts,all_groups=all_groups)
+
 
 
 if __name__ == '__main__':
