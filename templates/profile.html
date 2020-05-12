@@ -109,6 +109,14 @@
                 <td>{{ account.email }}</td>
             </tr>
         </table>
+        {% if account.user_type == 'SuperUser' %}
+        <hr>
+        <a href="{{ url_for('listofAdminpages') }}">
+                <button class="btn btn-primary" style="font-size: 25px; width: 200px;
+                 word-break: break-all; height: 80px; ">
+                        Management
+                </button></a>
+        {% endif %}
         <hr>
         <h4 style="color: #4a536e; font-size: 22px;">My Groups</h4>
         {% if group_info %}

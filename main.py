@@ -571,11 +571,10 @@ def profile():
 
         # We need all the account info for the user so we can display it on the profile page
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-
         # ==============================EVALUATION SCORES===================================
         # get group_id where user evals are still pending
-        cursor.execute('SELECT group_id FROM tb_user_evaluations WHERE user_id = %s AND evaluation_status = %s',
-                       (session['user_id'], 'pending',))
+        cursor.execute('SELECT group_id FROM tb_user_evaluations WHERE user_id = %s AND evaluation_score = %s',
+                       (session.get('user_id'), 'pending',))
         user_evaluation_group_id = cursor.fetchall()
         # user_evaluation_group_id[0]['group_id']
 
