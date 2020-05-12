@@ -32,7 +32,7 @@ app.secret_key = '111'
 # Enter your database connection details below
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = '111111'
+app.config['MYSQL_PASSWORD'] = 'root'
 app.config['MYSQL_DB'] = 'csc322_project'
 
 # Intialize MySQL
@@ -55,12 +55,7 @@ def admin_login_required(func):  # admin login required decorator
 
     @wraps(func)
     def wrapper(*args, **kwargs):
-        user_id = session.get('user_id')
-        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-        cursor.execute('SELECT tb_profile.*, tb_user.user_id FROM tb_user INNER JOIN tb_profile ON'
-                       ' tb_profile.user_id = tb_user.user_id WHERE tb_user.user_id = %s ', (user_id,))
-        issuper = cursor.fetchone()
-        if issuper and issuper['user_type'] == 'SuperUser':
+        if session.get('user_id') and session.get('username') == 'admin':
             return func(*args, **kwargs)
         else:
             return redirect(url_for('login'))
@@ -68,13 +63,7 @@ def admin_login_required(func):  # admin login required decorator
     return wrapper
 
 
-@app.route("/admin/", methods=['GET', 'POST'])
-@admin_login_required
-def listofAdminpages():
-    return render_template('admin.html')
-
-
-@app.route("/pending/", methods=['GET', 'POST'])  # admin adding or deleting accounts
+@app.route("/admin", methods=['get', 'post'])  # admin adding or deleting accounts
 @admin_login_required  # must be logged in as admin to access this page!
 def admin():
     if request.method == 'POST':
@@ -85,7 +74,6 @@ def admin():
             email = request.form['email']
             interest = request.form['interest']
             credential = request.form['credential']
-            reference = request.form['reference']
             user_password = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(10)])
             cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
             # check to see if account already exist by email or user_name
@@ -93,9 +81,8 @@ def admin():
             account = cursor.fetchone()
             # if it doesnt insert into db
             if not account:
-                cursor.execute("INSERT INTO tb_user (user_name, user_password, email, credential, reference, interest)"
-                               " VALUES (%s, %s, %s, %s,%s, %s)",
-                               (user_name, user_password, email, credential, reference, interest))
+                cursor.execute("INSERT INTO tb_user (user_name, user_password, email, credential, interest)"
+                               " VALUES (%s, %s, %s, %s, %s)", (user_name, user_password, email, credential, interest))
                 # send email depending if it is an appeal or first time application
                 if request.form['message'] == "NONE":
                     welcome = user_name + " your Whiteboard application has been approved and your account has been" \
@@ -125,7 +112,7 @@ def admin():
                 reject = username + " We are sorry to say, your Whiteboard appeal has not been approved"
                 # put them into the blacklist if it is an appeal
                 cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-                cursor.execute("INSERT INTO tb_blacklist (email, lastlogin)" "VALUES (%s,%s)", (email, '0'))
+                cursor.execute("INSERT INTO tb_blacklist (email)" "VALUES (%s)", (email,))
                 mysql.connection.commit()
             msg = Message("Thank you for applying", recipients=[email])
             msg.body = reject
@@ -142,8 +129,8 @@ def admin():
     # Fetch all post records and return result
     applied = cursor.fetchall()
     if applied:
-        return render_template('pending.html', applied=applied)
-    return render_template('pending.html')
+        return render_template('admin.html', applied=applied)
+    return render_template('admin.html')
 
 
 # page where they can reset the password
@@ -224,21 +211,6 @@ def home():
     # flag general post, since we need to show the top 3 rated post, we add the flag at the 4th post
     if len(post) > 3:
         post[3]['flag'] = 1
-
-    # find all ordinary users who scores > 25
-    cursor.execute('SELECT * FROM tb_profile WHERE user_type = "Ordinary" AND user_scores > 25')
-    ou_vip = cursor.fetchall()
-    for i in range(len(ou_vip)):
-        # update to be VIP
-        cursor.execute('UPDATE tb_profile SET user_type = %s WHERE user_id = %s', ('VIP', ou_vip[i]['user_id']))
-        mysql.connection.commit()
-    # find all VIP who scores < 25
-    cursor.execute('SELECT * FROM tb_profile WHERE user_type = "VIP" AND user_scores < 25')
-    vip_ou = cursor.fetchall()
-    for i in range(len(vip_ou)):
-        # demote to be Ordinary user
-        cursor.execute('UPDATE tb_profile SET user_type = %s WHERE user_id = %s', ('Ordinary', vip_ou[i]['user_id']))
-        mysql.connection.commit()
     # Select all ordinary user profiles and sort by scores
     cursor.execute('SELECT tb_user.*, tb_profile.user_type, tb_profile.user_scores FROM tb_user INNER JOIN tb_profile '
                    'ON tb_user.user_id = tb_profile.user_id WHERE tb_profile.user_type = "Ordinary" order by '
@@ -254,22 +226,22 @@ def home():
             top_OU = top_OU[:3]
     # Select all super user profiles and sort by scores
     cursor.execute('SELECT tb_user.*, tb_profile.user_type, tb_profile.user_scores FROM tb_user INNER JOIN tb_profile '
-                   'ON tb_user.user_id = tb_profile.user_id WHERE tb_profile.user_type = "VIP" order by '
+                   'ON tb_user.user_id = tb_profile.user_id WHERE tb_profile.user_type = "SuperUser" order by '
                    '-tb_profile.user_scores ')
-    top_VIP = cursor.fetchall()
+    top_SU = cursor.fetchall()
     # if exist super user profiles
-    if top_VIP:
+    if top_SU:
         # if total super users < 3, only show their profiles
-        if len(top_VIP) < 3:
-            top_VIP = top_VIP[:len(top_VIP)]
+        if len(top_SU) < 3:
+            top_SU = top_SU[:len(top_SU)]
         # otherwise, show the top 3 rated super users' profiles
         else:
-            top_VIP = top_VIP[:3]
+            top_SU = top_SU[:3]
 
     if post:
-        return render_template('index.html', post=post, top_VIP=top_VIP, top_OU=top_OU)
+        return render_template('index.html', post=post, top_SU=top_SU, top_OU=top_OU)
 
-    return render_template('index.html', top_VIP=top_VIP, top_OU=top_OU)
+    return render_template('index.html', top_SU=top_SU, top_OU=top_OU)
 
 
 #  link the post_content to the reply page
@@ -370,50 +342,28 @@ def login():
         account = cursor.fetchone()
         # If account exists in accounts table in out database
         if account:
-            # check if in blacklist
-            cursor.execute('SELECT * FROM tb_blacklist WHERE email = %s', (email,))
-            blacklist = cursor.fetchone()
-            if not blacklist or blacklist['lastlogin'] == 1:
-                if blacklist:
-                    cursor.execute("UPDATE tb_blacklist SET lastlogin = %s WHERE email= %s", ('0', email))
-                    mysql.connection.commit()
-                # Create session data, we can access this data in other routes
-                session['loggedin'] = True
-                session['user_id'] = account['user_id']
-                session['username'] = account['user_name']
-                # check if user is a new user
-                cursor.execute('SELECT * FROM tb_profile WHERE user_id = %s', [session['user_id']])
-                # if user is not a new user
-                user_exist = cursor.fetchone()
-                if user_exist:
-                    # go profile page
-                    if account['didtheychangepass'] == 0:
-                        return redirect(url_for("reset_password"))
-                    else:
-                        return redirect(url_for('profile'))
-                # get their score
-                cursor.execute('SELECT user_id FROM tb_user WHERE user_name = %s', ([account['reference']],))
-                exist = cursor.fetchone()
-                if exist:
-                    cursor.execute('SELECT user_type FROM tb_profile WHERE user_id = %s', (exist['user_id'],))
-                    user = cursor.fetchone()
-                    if user['user_type'] == 'Ordinary':
-                        cursor.execute('INSERT INTO tb_profile (user_id, user_scores) VALUES (%s,%s)',
-                                       ([session['user_id']], '10'))
-                        mysql.connection.commit()
-                    else:
-                        cursor.execute('INSERT INTO tb_profile (user_id, user_scores) VALUES (%s,%s)',
-                                       ([session['user_id']], '20'))
-                        mysql.connection.commit()
-                else:
-                    # otherwise insert data into table profile: user_id, user_type, user_status, user_scores
-                    cursor.execute('INSERT INTO tb_profile (user_id) VALUES (%s)', [session['user_id']])
-                    mysql.connection.commit()
+            # Create session data, we can access this data in other routes
+            session['loggedin'] = True
+            session['user_id'] = account['user_id']
+            session['username'] = account['user_name']
+            # check if user is a new user
+            cursor.execute('SELECT * FROM tb_profile WHERE user_id = %s', [session['user_id']])
+            # if user is not a new user
+            user_exist = cursor.fetchone()
+            if user_exist:
                 # go profile page
                 if account['didtheychangepass'] == 0:
-                    return redirect(url_for("reset_password"))
+                    return (redirect(url_for("reset_password")))
                 else:
                     return redirect(url_for('profile'))
+            # otherwise insert data into table profile: user_id, user_type, user_status, user_scores
+            cursor.execute('INSERT INTO tb_profile (user_id) VALUES (%s)', [session['user_id']])
+            mysql.connection.commit()
+            # go profile page
+            if account['didtheychangepass'] == 0:
+                return redirect(url_for("reset_password"))
+            else:
+                return redirect(url_for('profile'))
         else:
             # Account doesnt exist or username/password incorrect
             msg = 'Incorrect email/password!'
@@ -442,10 +392,8 @@ def register():
         account = cursor.fetchone()
         cursor.execute('SELECT * FROM tb_applied WHERE email = %s OR username = %s', (email, username))
         application = cursor.fetchone()
-        cursor.execute('SELECT * FROM tb_blacklist WHERE email = %s', (email,))
-        blacklist = cursor.fetchone()
         # If account doesnt exists show error and validation checks
-        if account or application or blacklist:
+        if account or application:
             msg = 'Invalid Email or Username!'
         elif not re.match(r'[^@]+@[^@]+\.[^@]+', email):
             msg = 'Invalid email address!'
@@ -542,7 +490,7 @@ def profile():
                     # if not then insert it into the correct list
                     if not exist and not otherlist:
                         cursor.execute("INSERT INTO tb_whitelist (user_id, user_name_friend)" "VALUES (%s,%s)",
-                                       ([session['user_id']], user_name_exist['user_name']))
+                                       ([session['user_id']], user_whitelist))
                         mysql.connection.commit()
 
             # user adding into the black list
@@ -566,97 +514,37 @@ def profile():
                     # if not put them into the list
                     if not exist and not otherlist:
                         cursor.execute("INSERT INTO tb_user_blacklist (user_id, user_name_blocked)" "VALUES (%s,%s)",
-                                       ([session['user_id']], user_name_exist['user_name']))
+                                       ([session['user_id']], user_blacklist))
                         mysql.connection.commit()
 
         # We need all the account info for the user so we can display it on the profile page
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
-        # ==============================EVALUATION SCORES===================================
-        # get group_id where user evals are still pending
-        cursor.execute('SELECT group_id FROM tb_user_evaluations WHERE user_id = %s AND evaluation_status = %s',
-                       (session['user_id'], 'pending',))
-        user_evaluation_group_id = cursor.fetchall()
-        # user_evaluation_group_id[0]['group_id']
+        # get all NEW user group evaluations that are still pending
+        cursor.execute('SELECT user_eval_id, evaluation_score from tb_user_evaluations where user_id = %s', (session['user_id'],))
+        user_scores = cursor.fetchall()
+        # print('Pending User Evaluations...', user_scores)
 
-        # if user evaluations exists where
-        if user_evaluation_group_id:
-            print('Pending Evaluation for User obtained: ', user_evaluation_group_id)
+        user_score = 0
+        total_score = 0
 
-            for i in range(0, len(user_evaluation_group_id)):
+        # if evaluations_scores exist, add all of them up and divide by length of user_scores
+        if (user_scores):
+            for i in range(0, len(user_scores)):
+                total_score += user_scores[i]['evaluation_score']
+                # update evaluation_status to finished - evaluating
+                # cursor.execute('UPDATE tb_user_evaluations SET evaluation_status = %s WHERE user_eval_id = %s', ('evaluated', user_scores[i]['user_eval_id'],))
 
-                # get total group members to complete close group form and find median of evaluated scores
-                cursor.execute('SELECT user_id FROM tb_group_members WHERE group_id = %s ',
-                               (user_evaluation_group_id[i]['group_id'],))
-                total_group_members = cursor.fetchall()
-                print('Total Group Members to Close Group and Evaluate User Scores: ', total_group_members)
+            user_score = round(total_score / len(user_scores))
 
-                # check if total group members exist in tb_user_evaluation - that means user_eval scores are ready to be averaged into specific user in the group
-                cursor.execute(
-                    'SELECT rater_id from tb_user_evaluations where group_id = %s and evaluation_status = %s group by rater_id',
-                    (user_evaluation_group_id[i]['group_id'], 'pending',))
-                evaluated_group_members = cursor.fetchall()
-                print('Users who have evaluated other users in group: ', evaluated_group_members)
+            print(user_score)
 
-                if len(total_group_members) == len(evaluated_group_members):
-                    print('All users have evaluated! Get the median of your evaluated scores!')
+            # update user_score in tb_user
+            cursor.execute('UPDATE tb_profile SET user_scores = user_scores + %s WHERE user_id = %s',
+                            (user_score, session['user_id']))
 
-                    # get all evaluation scores from user's group mates
-                    cursor.execute(
-                        'SELECT evaluation_score FROM tb_user_evaluations WHERE user_id = %s AND evaluation_status = %s',
-                        (session['user_id'], 'pending',))
-                    all_evaluation_scores = cursor.fetchall()
-                    print(all_evaluation_scores)
 
-                    # check if user already has score evaluated
-                    cursor.execute('SELECT * from tb_user_evaluation_status WHERE user_id = %s AND group_id = %s',
-                                   (session['user_id'], user_evaluation_group_id[i]['group_id'],))
-                    already_added = cursor.fetchone()
-                    print('-----------already adddeddddd-------')
-                    print(already_added)
-                    if already_added:
-                        print('User already has evaluation score reflected in their reputation score!')
-                    else:
-                        total_score = 0
 
-                        # take median of all scores and update value to user reputation score
-                        for j in range(0, len(all_evaluation_scores)):
-                            total_score += all_evaluation_scores[j]['evaluation_score']
-
-                        # print('Users total score: ', total_score)
-                        user_score = round(total_score / len(all_evaluation_scores))
-                        print('Median User Evaluations:', user_score)
-
-                        # update new rep score to user
-                        cursor.execute('UPDATE tb_profile SET user_scores = user_scores + %s WHERE user_id = %s',
-                                       (user_score, session['user_id']))
-
-                        # insert eval_status for user in tb_user_evaluation_status
-                        cursor.execute('INSERT INTO tb_user_evaluation_status (group_id, user_id) VALUES (%s, %s)',
-                                       (user_evaluation_group_id[i]['group_id'], session['user_id'],))
-
-                    user_score_added = 0
-
-                    # if total_group_members in tb_user_evaluation_status - set evaluation_status to 'complete'
-                    for k in range(0, len(total_group_members)):
-                        cursor.execute('SELECT * from tb_user_evaluation_status WHERE user_id = %s',
-                                       (total_group_members[k]['user_id'],))
-                        score_added = cursor.fetchone()
-                        if not score_added:
-                            print('Not all user has had their scores added to their reputation score')
-                        else:
-                            user_score_added += 1
-
-                    if user_score_added == len(total_group_members):
-                        # if all user scores are added to their profile
-                        # set all evaluation to 'evaluated'
-                        cursor.execute('UPDATE tb_user_evaluations SET evaluation_status = %s WHERE group_id = %s',
-                                       ('evaluated', user_evaluation_group_id[i]['group_id'],))
-
-                    mysql.connection.commit()
-
-                else:
-                    print('Not All users have evaluated!')
 
         # join table profile and table user to get user information: id, name, email, user_type, user_scores,
         cursor.execute('SELECT tb_profile.*, tb_user.user_name, tb_user.email'
@@ -669,15 +557,13 @@ def profile():
         post_history = cursor.fetchall()
         # get all the groups' information that the user is in
         cursor.execute('SELECT tb_group.*, tb_group_members.user_name FROM tb_group_members INNER JOIN tb_group'
-                       ' ON tb_group.group_id = tb_group_members.group_id WHERE group_status = %s AND'
-                       ' tb_group_members.user_name = %s',
+                       ' ON tb_group.group_id = tb_group_members.group_id WHERE group_status = %s AND tb_group_members.user_name = %s',
                        ('active', [session['username']],))
         group_info = cursor.fetchall()
 
         # get all inactive groups that the user is in
         cursor.execute('SELECT tb_group.*, tb_group_members.user_name FROM tb_group_members INNER JOIN tb_group'
-                       ' ON tb_group.group_id = tb_group_members.group_id WHERE group_status = %s AND'
-                       ' tb_group_members.user_name = %s', ('inactive', [session['username']]), )
+                       ' ON tb_group.group_id = tb_group_members.group_id WHERE group_status = %s AND tb_group_members.user_name = %s', ('inactive', [session['username']]),)
         inactive_groups = cursor.fetchall()
         print('All user inactive groups: ', inactive_groups)
 
@@ -692,48 +578,24 @@ def profile():
         cursor.execute('SELECT user_name_blocked FROM tb_user_blacklist WHERE user_id = %s', [session['user_id']])
         blocked = cursor.fetchall()
         # Show the profile page with account info
-
-        # find all ordinary users who scores > 25
-        cursor.execute('SELECT * FROM tb_profile WHERE user_type = "Ordinary" AND user_scores > 25')
-        ou_vip = cursor.fetchall()
-        for i in range(len(ou_vip)):
-            # update to be VIP
-            cursor.execute('UPDATE tb_profile SET user_type = %s WHERE user_id = %s', ('VIP', ou_vip[i]['user_id']))
-            mysql.connection.commit()
-        # find all VIP who scores < 25
-        cursor.execute('SELECT * FROM tb_profile WHERE user_type = "VIP" AND user_scores < 25')
-        vip_ou = cursor.fetchall()
-        for i in range(len(vip_ou)):
-            # demote to be Ordinary user
-            cursor.execute('UPDATE tb_profile SET user_type = %s WHERE user_id = %s',
-                           ('Ordinary', vip_ou[i]['user_id']))
-            mysql.connection.commit()
+        mysql.connection.commit()
         return render_template('profile.html', account=account, post_history=post_history, group_info=group_info,
-                               invitation=invitation, friends=friends, blocked=blocked,
-                               completed_projects=inactive_groups)
+                               invitation=invitation, friends=friends, blocked=blocked, completed_projects=inactive_groups)
     # User is not loggedin redirect to login page
     return redirect(url_for('login'))
 
 
 # this will be the poster_file page
-@app.route('/poster_profile/<poster_id>', methods=['POST', 'GET'])
+@app.route('/poster_profile/<poster_id>')
 # @login_required
 def poster_profile(poster_id):
-    if request.method == "POST":
-        compliment_content = request.form['content']
-        compliment_sender = session.get('user_id')
-        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-        cursor.execute(
-            "INSERT INTO tb_compliments (compliment_sender, compliment_content, compliment_getter)" "VALUES (%s,%s,%s)",
-            (compliment_sender, compliment_content, poster_id))
-        mysql.connection.commit()
-
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     # join table user and table profile to get the poster information: id, name, email, user_type, user_scores
     cursor.execute('SELECT tb_profile.*, tb_user.user_name, tb_user.email, tb_user.user_id'
                    ' FROM tb_user INNER JOIN tb_profile ON'
                    ' tb_profile.user_id = tb_user.user_id WHERE tb_user.user_id = %s', (poster_id,))
     account = cursor.fetchone()
+
     if not account:
         flash("User doesn't exist")
         return redirect(url_for('home'))
@@ -750,21 +612,6 @@ def poster_profile(poster_id):
                    ' tb_group_members.user_name = tb_user.user_name WHERE tb_user.user_id = %s', (poster_id,))
 
     others_group_info = cursor.fetchall()
-    # find all ordinary users who scores > 25
-    cursor.execute('SELECT * FROM tb_profile WHERE user_type = "Ordinary" AND user_scores > 25')
-    ou_vip = cursor.fetchall()
-    for i in range(len(ou_vip)):
-        # update to be VIP
-        cursor.execute('UPDATE tb_profile SET user_type = %s WHERE user_id = %s', ('VIP', ou_vip[i]['user_id']))
-        mysql.connection.commit()
-    # find all VIP who scores < 25
-    cursor.execute('SELECT * FROM tb_profile WHERE user_type = "VIP" AND user_scores < 25')
-    vip_ou = cursor.fetchall()
-    for i in range(len(vip_ou)):
-        # demote to be Ordinary user
-        cursor.execute('UPDATE tb_profile SET user_type = %s WHERE user_id = %s',
-                       ('Ordinary', vip_ou[i]['user_id']))
-        mysql.connection.commit()
     return render_template('profile.html', poster_account=account, post_history=post_history,
                            others_group_info=others_group_info)
 
@@ -860,11 +707,13 @@ def post():
 # delete post
 @app.route('/<post_id>/')
 def delete_post(post_id):
-    if request.method == 'POST':
-        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-        cursor.execute('DELETE FROM tb_post WHERE post_id = %s', (post_id,))
-        mysql.connection.commit()
-        return redirect(url_for('profile'))
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    print('p_id', post_id)
+    cursor.execute('DELETE FROM tb_post WHERE post_id = %s', (post_id,))
+    mysql.connection.commit()
+    return redirect(url_for('profile'))
+
+
 
 
 # search bar
@@ -932,6 +781,7 @@ def into_group(group_id):
                    ' ON tb_group.group_id = tb_group_members.group_id WHERE tb_group.group_id = %s', (group_id,))
 
     group = cursor.fetchone()
+    print('group', group)
     # get the group members' information: user_name, user_id
     cursor.execute('SELECT tb_group_members.*, tb_user.user_id FROM tb_group_members INNER JOIN tb_user '
                    'ON tb_group_members.user_name = tb_user.user_name WHERE'
@@ -946,9 +796,8 @@ def into_group(group_id):
     # cursor.execute('SELECT user_praises, user_warnings from tb_group_members where')
     group_member_points = []
     for i in range(0, len(group_members)):
-        cursor.execute(
-            'SELECT user_id, user_praises, user_warnings from tb_group_members where user_id = %s and group_id = %s',
-            (group_members[i]['user_id'], group_id,))
+        cursor.execute('SELECT user_id, user_praises, user_warnings from tb_group_members where user_id = %s and group_id = %s',
+                       (group_members[i]['user_id'], group_id,))
         member_points = cursor.fetchone()
         group_member_points.append(member_points)
 
@@ -1018,12 +867,7 @@ def into_group(group_id):
         # =========================Group Vote=============================
 
     # get all unresponded user group votes
-
-    cursor.execute('select group_vote_id, vote_subject, user_subject, user_id from tb_group_votes where'
-                   ' (group_vote_id not in (select group_vote_id from tb_group_vote_responses'
-                   ' where group_id = %s and voter_id = %s) and group_vote_status = %s)',
-                   (group_id, session.get('user_id'), 'open',))
-
+    cursor.execute('select group_vote_id, vote_subject, user_subject, user_id from tb_group_votes where (group_vote_id not in (select group_vote_id from tb_group_vote_responses where group_id = %s and voter_id = %s) and group_vote_status = %s and group_id=%s)',(group_id, session['user_id'], 'open', group_id))
     all_group_votes = cursor.fetchall()
     print('----------ALL UNRESPONDED GROUP VOTES---------')
     print(all_group_votes)
@@ -1031,7 +875,7 @@ def into_group(group_id):
     user_subject_username = []
     # for all user_subject in group_votes get user_name
     for group_vote in all_group_votes:
-        # print(group_vote['user_subject'])
+    # print(group_vote['user_subject'])
         if group_vote['user_subject'] is not None:
             cursor.execute('SELECT user_name from tb_user where user_id = %s', (group_vote['user_subject'],))
             subject_username = cursor.fetchone()
@@ -1039,6 +883,7 @@ def into_group(group_id):
 
         else:
             user_subject_username.append(None)
+
 
     # add subject username into group_vote data
     for i in range(0, len(all_group_votes)):
@@ -1050,7 +895,7 @@ def into_group(group_id):
     # get user's responded group votes
     cursor.execute(
         'select tb_group_votes.group_id, tb_group_votes.group_vote_id, tb_group_vote_responses.vote_response, tb_group_votes.vote_subject, tb_group_votes.user_subject, tb_group_votes.group_vote_status, tb_group_votes.highest_vote, tb_group_votes.vote_count from tb_group_votes join tb_group_vote_responses on tb_group_votes.group_vote_id = tb_group_vote_responses.group_vote_id where tb_group_vote_responses.voter_id = %s and tb_group_votes.group_id = %s',
-        (session.get('user_id'), group_id,))
+        (session['user_id'], group_id,))
     voted_group_votes = cursor.fetchall()
 
     # replace user_subject id with user_subject usernames
@@ -1064,7 +909,7 @@ def into_group(group_id):
         else:
             subject_usernames.append(None)
 
-    # add subject username into group_vote data
+     # add subject username into group_vote data
     for i in range(0, len(voted_group_votes)):
         if voted_group_votes[i]['user_subject'] is not None:
             voted_group_votes[i]['user_subject'] = subject_usernames[i]
@@ -1109,9 +954,8 @@ def into_group(group_id):
                     print(group_vote['user_subject'], ' will get a ', group_vote['vote_subject'])
                     if group_vote['vote_subject'] == 'praise' and group_vote['group_vote_status'] == 'open':
                         # update user praise points
-                        cursor.execute(
-                            'UPDATE tb_group_members SET user_praises = user_praises + 1 where user_id = %s and group_id=%s',
-                            (user_id, group_id,))
+                        cursor.execute('UPDATE tb_group_members SET user_praises = user_praises + 1 where user_id = %s and group_id=%s',
+                                       (user_id, group_id,))
                         cursor.execute('UPDATE tb_group_votes SET group_vote_status = %s WHERE group_vote_id = %s',
                                        ('closed', group_vote['group_vote_id']))
                         # save to db
@@ -1135,7 +979,7 @@ def into_group(group_id):
                     else:
                         print(group_vote['user_subject'], ' will not get a ', group_vote['vote_subject'])
 
-        # else if group_vote['user_subject] is None = close_group
+         # else if group_vote['user_subject] is None = close_group
         else:
             # get COUNT(group_vote_id) where vote_subject = 'close_group'
             if total_group_vote_responses['COUNT(group_vote_id)'] == total_group_members:
@@ -1166,9 +1010,7 @@ def into_group(group_id):
 
                         # return redirect(url_for('home'))
                         return render_template('group.html', group=group, group_members=group_members, chat=chat,
-                                               voted_polls=voted_polls, polls=all_options, group_status=group_status,
-                                               group_votes=all_group_votes, voted_group_votes=voted_group_votes,
-                                               member_points=group_member_points)
+                                   voted_polls=voted_polls, polls=all_options, group_status=group_status, group_votes = all_group_votes, voted_group_votes=voted_group_votes, member_points=group_member_points)
 
                     # not all close group eval form submitted
                     elif num_of_evaluations < len(group_members):
@@ -1200,13 +1042,10 @@ def into_group(group_id):
         # if the user is a group member in this group, go group page and show all information
         if is_group_member:
             return render_template('group.html', group=group, group_members=group_members, chat=chat,
-                                   voted_polls=voted_polls, polls=all_options, group_status=group_status,
-                                   group_votes=all_group_votes, voted_group_votes=voted_group_votes,
-                                   member_points=group_member_points)
+                                   voted_polls=voted_polls, polls=all_options, group_status=group_status, group_votes = all_group_votes, voted_group_votes=voted_group_votes, member_points=group_member_points)
     # otherwise, only show some public information such as group members list, description....
     return render_template('group.html', group=group, group_members=group_members, chat=chat, voted_polls=voted_polls,
-                           polls=all_options, not_in_group=not_in_group, group_status=group_status,
-                           member_points=group_member_points)
+                           polls=all_options, not_in_group=not_in_group, group_status=group_status, member_points=group_member_points)
 
 
 # invite feature
@@ -1215,6 +1054,7 @@ def invite(group_id):
     if request.method == 'POST':
         user_name = request.form['user_name']
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
 
         # check the user name the user inputted if exist in user database
         cursor.execute('SELECT user_name FROM tb_user WHERE user_name = %s', (user_name,))
@@ -1251,8 +1091,7 @@ def invite(group_id):
 
         # added in in invitee whitelist automatically add into the group with a message
         if where_to_place == 'whitelist':
-            cursor.execute('INSERT INTO tb_group_members (group_id, user_name, user_id) VALUES (%s, %s, %s)',
-                           (group_id, user_name, account['user_id']))
+            cursor.execute('INSERT INTO tb_group_members (group_id, user_name, user_id) VALUES (%s, %s, %s)', (group_id, user_name, account['user_id']))
             cursor.execute('INSERT INTO tb_chat (user_id, group_id, chat_content) VALUES (%s, %s, %s)',
                            ([account['user_id']], group_id, "Has joined the group!"))
             mysql.connection.commit()
@@ -1388,8 +1227,6 @@ def poll_vote(group_id):
                                                     poll_option_details[0]['option_id'], session['user_id']))
             mysql.connection.commit()
             return redirect(url_for('into_group', group_id=group_id))
-
-
 # ===========================================NEW CHANGES===========================================================
 @app.route('/group/<group_name>/create-group-vote', methods=['GET', 'POST'])
 def create_groupvote(group_name):
@@ -1407,8 +1244,7 @@ def create_groupvote(group_name):
 
         if groupvote_type == 'close_group':
             # check if close_group groupvote already exists in tb_group_votes
-            cursor.execute('SELECT * FROM tb_group_votes WHERE vote_subject = %s AND group_id = %s',
-                           (groupvote_type, group_id,))
+            cursor.execute('SELECT * FROM tb_group_votes WHERE vote_subject = %s AND group_id = %s', (groupvote_type, group_id,))
             close_group_vote_exists = cursor.fetchone()
             if close_group_vote_exists:
                 msg = 'You may not create more than one Close Group Vote!'
@@ -1423,8 +1259,7 @@ def create_groupvote(group_name):
             user_subject = request.form['user-subject']
 
             # #check if user_subject exist in group
-            cursor.execute('SELECT user_id from tb_group_members where user_name = %s and group_id= %s',
-                           (user_subject, group_id,))
+            cursor.execute('SELECT user_id from tb_group_members where user_name = %s and group_id= %s', (user_subject, group_id,))
             check_user_exists = cursor.fetchone()
             print(check_user_exists)
 
@@ -1433,14 +1268,13 @@ def create_groupvote(group_name):
                 return redirect(url_for('into_group', group_id=group_id))
             else:
                 # insert user group-vote
-                cursor.execute(
-                    'INSERT INTO tb_group_votes (group_id, vote_subject, user_subject, user_id) VALUES (%s, %s, %s, %s)',
-                    (group_id, groupvote_type, check_user_exists['user_id'], session['user_id'],))
+                cursor.execute('INSERT INTO tb_group_votes (group_id, vote_subject, user_subject, user_id) VALUES (%s, %s, %s, %s)', (group_id, groupvote_type, check_user_exists['user_id'], session['user_id'],))
+
+
 
         mysql.connection.commit();
 
     return redirect(url_for('into_group', group_id=group_id))
-
 
 @app.route('/group/<group_id>/<group_vote_id>/group-vote-response', methods=['GET', 'POST'])
 def groupvote_response(group_id, group_vote_id):
@@ -1461,8 +1295,7 @@ def groupvote_response(group_id, group_vote_id):
 
     return redirect(url_for('into_group', group_id=group_id))
 
-
-@app.route('/group/<group_id>/close', methods=['GET', 'POST'])
+@app.route('/group/<group_id>/close', methods=['GET','POST'])
 def close_group(group_id):
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     # get list of user_id in group (given group_name)
@@ -1471,7 +1304,7 @@ def close_group(group_id):
                    'join tb_group_members on tb_user.user_id = tb_group_members.user_id '
                    'join tb_group on tb_group_members.group_id = tb_group.group_id '
                    'where tb_group.group_id =%s and tb_user.user_id != %s',
-                   (group_id, session['user_id']))
+        (group_id, session['user_id']))
     group_members = cursor.fetchall()
     print(group_members)
 
@@ -1491,106 +1324,45 @@ def close_group(group_id):
         print('--------------EVALUATED GROUP MEMBERS-----------')
         print(group_members)
 
-        for i in range(0, len(group_members)):
+
+        for i in range(0, len(userRatings)):
             print(group_members[i]['user_name'], userRatings[str(i)])
+            cursor.execute('INSERT INTO tb_user_evaluations (group_id, rater_id, evaluation_score, user_id) VALUES (%s, %s, %s, %s)', (group_id, session['user_id'], userRatings[str(i)], group_members[i]['user_id']))
 
-            cursor.execute(
-                'INSERT INTO tb_user_evaluations (group_id, rater_id, evaluation_score, user_id) VALUES (%s, %s, %s, %s)',
-                (group_id, session['user_id'], userRatings[str(i)], group_members[i]['user_id']))
+            # if wb_bb_response == 'Whitelist' add user to whitebox
+            if wb_bb_response[i] == 'Whitelist':
+                # check if user already exists in whitelist
+                cursor.execute('SELECT * from tb_whitelist WHERE user_name_friend = %s AND user_id = %s', (group_members[i]['user_name'], session['user_id'],))
+                user_wb_exist = cursor.fetchone
+                print(user_wb_exist)
 
-            # insert project evaluation into tb_project_evaluations
-            cursor.execute(
-                'INSERT INTO tb_project_evaluations (project_open_reason, project_close_reason, group_id) VALUES (%s, %s, %s)',
-                (open_reason, close_reason, group_id,))
+                # check if user exists in blacklist
+                cursor.execute('SELECT * from tb_user_blacklist WHERE user_name_blocked = %s', (group_members[i]['user_name'],))
+                user_bb_exist = cursor.fetchone()
+
+                # if user_bb_exist:
+                #     # remove from user_id from blacklist and add to whitelist
+                #     cursor.execute('DELETE FROM tb_user_blacklist WHERE user_name_blocked = %s', (group_members[i]['user_name'],))
+
+                if user_wb_exist:
+                    print('User already exists in the Whitelist')
+                else:
+                    print('Inserting into rated user into whitelist!!')
+                    cursor.execute('INSERT INTO tb_whitelist (user_id, user_name_friend) VALUES (%s, %s)', (session['user_id'], group_members[i]['user_name'],))
+                    mysql.connection.commit();
+
 
             # set group_status in tb_group given group_name to 'inactive'
             # cursor.execute('UPDATE tb_group SET group_status = %s WHERE group_id = %s', ('inactive', group_id,))
 
+            # insert project evaluation into tb_project_evaluations
+            cursor.execute('INSERT INTO tb_project_evaluations (project_open_reason, project_close_reason, group_id) VALUES (%s, %s, %s)', (open_reason, close_reason, group_id,))
+
             mysql.connection.commit();
 
-        return jsonify(result)
+            return jsonify(result)
 
     return render_template('close_group.html', group_id=group_id, group_members=group_members)
-
-
-@app.route('/message', methods=['GET', 'POST'])
-def messageSU():
-    if request.method == 'POST':
-        message_name = request.form['name']
-        message_content = request.form['content']
-        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-        cursor.execute("INSERT INTO tb_message_su (message_name, message_content)"
-                       " VALUES (%s, %s)", (message_name, message_content))
-        mysql.connection.commit()
-        return render_template('message.html', msg="SENT")
-    return render_template('message.html')
-
-
-@app.route("/adminMessages/", methods=['GET', 'POST'])
-@admin_login_required
-def adminMessages():
-    if request.method == 'POST':
-        if "Deletemessage" in request.form:
-            message_id = request.form['message_id']
-            cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-            cursor.execute('DELETE FROM tb_message_su WHERE message_id = %s', (message_id))
-            mysql.connection.commit()
-        elif "Deletecompliment" in request.form:
-            compliment = request.form['compliment_id']
-            cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-            cursor.execute('DELETE FROM tb_compliments WHERE compliment_id = %s', (compliment))
-            mysql.connection.commit()
-    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cursor.execute('SELECT * FROM tb_message_su')
-    # Fetch all post records and return result
-    messages = cursor.fetchall()
-    cursor.execute('SELECT * FROM tb_compliments')
-    compliments = cursor.fetchall()
-    if messages or compliments:
-        return render_template('adminMessages.html', messages=messages, compliments=compliments)
-    return render_template('adminMessages.html')
-
-
-@app.route("/allUsers/", methods=['GET', 'POST'])
-@admin_login_required
-def adminEdit():
-    if request.method == "POST":
-        if "Submit" in request.form:
-            user_id = request.form['user_id']
-            user_scores = int(request.form['user_scores'])
-            score = int(request.form['score'])
-            insert = user_scores + score
-            cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-            cursor.execute('UPDATE tb_profile SET user_scores = %s WHERE user_id = %s',
-                           (insert, user_id))
-            mysql.connection.commit()
-        elif 'Blacklist' in request.form:
-            user_id = request.form['user_id']
-            email = request.form['email']
-            cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-            cursor.execute('UPDATE tb_profile SET user_status = %s WHERE user_id = %s',
-                           ('\x00', user_id))
-            cursor.execute("INSERT INTO tb_blacklist (email)" "VALUES (%s)", (email,))
-            mysql.connection.commit()
-            msg = Message("We are sorry to see you go!", recipients=[email])
-            msg.body = "Due to your behaviour, you have been blacklisted. You have one login left for you process before you are locked out from Whiteboard forever."
-            mail.send(msg)
-        elif 'ShutDownGroup' in request.form:
-            group_id = request.form['group_id']
-            cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-            cursor.execute('INSERT INTO tb_chat (user_id, group_id, chat_content) VALUES (%s, %s, %s)',
-                           ([session['user_id']], group_id,
-                            "The Super Users have decided to shut down this group - you have a day for processing, then we ask you to initiate a shutdown."))
-            mysql.connection.commit()
-        # need to take care of group closings
-    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cursor.execute('SELECT tb_profile.*, tb_user.user_name, tb_user.email'
-                   ' FROM tb_user INNER JOIN tb_profile ON tb_profile.user_id = tb_user.user_id')
-    all_accounts = cursor.fetchall()
-    cursor.execute("SELECT * FROM tb_group")
-    all_groups = cursor.fetchall()
-    return render_template("allUsers.html", all_accounts=all_accounts, all_groups=all_groups)
-
 
 if __name__ == '__main__':
     app.run(debug=True)
