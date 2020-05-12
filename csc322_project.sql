@@ -23,15 +23,16 @@ insert into tb_applied (username, email,interest,credential,reference) values
     
 --  create table user
 CREATE TABLE tb_user ( 
-	user_id INT AUTO_INCREMENT,
+    user_id INT AUTO_INCREMENT,
     user_name VARCHAR(50) NOT NULL,
     user_password VARCHAR(50) NOT NULL ,
-	email VARCHAR(100) NOT NULL ,
+    email VARCHAR(100) NOT NULL ,
     didtheychangepass BOOLEAN NOT NULL DEFAULT 0 ,
     interest VARCHAR(50) ,
     credential VARCHAR(50),
-	PRIMARY KEY (user_id)
-	);
+    reference VARCHAR(50),
+    PRIMARY KEY (user_id)
+    );
     
 -- setting user_id auto increment from 100
 ALTER TABLE tb_user AUTO_INCREMENT = 100;
@@ -48,7 +49,9 @@ insert into tb_user (user_name, user_password,  email, didtheychangepass) values
 
 
 CREATE TABLE tb_blacklist ( 
-    email VARCHAR(100) NOT NULL 
+    email VARCHAR(100) NOT NULL,
+    lastlogin INT default 1,  -- one means they have one more login before they are kicked out forver 
+    PRIMARY KEY (email)
     );
 
 -- create table profile
@@ -61,7 +64,7 @@ create table tb_profile (
     );
 
 insert into tb_profile (user_id, user_type, user_scores) values
-(100,'Super User', 100),
+(100,'SuperUser', 100),
 (101, 'Ordinary', 20),
 (102, 'Ordinary', 10),
 (103, 'SuperUser', 30),
@@ -165,6 +168,29 @@ create table tb_group_members (
 
 insert into tb_group_members (group_id, user_name, user_id) values
 (1000, 'test4', 104);
+
+create table tb_message_su (
+    message_id INT auto_increment,
+    message_name VARCHAR(100),
+    message_content text,
+    primary key (message_id)
+);
+
+create table tb_compliments (
+    compliment_id INT auto_increment,
+    compliment_sender INT,
+    compliment_content text,
+    compliment_getter INT,
+    primary key (compliment_id),
+    foreign key (compliment_getter) references tb_user(user_id)
+);
+
+insert into tb_message_su (message_name, message_content) values
+('Reminder for Super Users', 'Please make sure to thorougly read and investigate each claim made in order to ensure the best user expirence for all the users Whiteboard.');
+
+insert into tb_compliments (compliment_content) values
+("If the Sender value is NONE, it means a visitor send the compliments - compliments of a visitor mean less than compliments sent from a user");
+
 
 
 -- create table chat
