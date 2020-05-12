@@ -25,8 +25,8 @@ video tutorial for reference: https://www.youtube.com/watch?v=UcpHkYfWarM&t=810s
 
 Flask dependicies that must be installed: 
 
-pip install flask_mail
-pip install flask_mysqldb 
+i. pip install flask_mail
+ii. pip install flask_mysqldb 
 
 1. Clone the master branch of this repo 
 2. Once you have the MYSQL server running and you have created the root password, replace app.config['MYSQL_PASSWORD'] = 'xxxx' on line 35 of main.py with your root password 
