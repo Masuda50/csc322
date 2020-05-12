@@ -67,12 +67,12 @@ def admin_login_required(func):  # admin login required decorator
     return wrapper
 
 
-@app.route("/Administration", methods=['GET', 'POST'])  
+@app.route("/admin/", methods=['GET', 'POST'])  
 @admin_login_required  
 def listofAdminpages():
     return render_template('admin.html')
 
-@app.route("/pend", methods=['GET', 'POST'])  # admin adding or deleting accounts
+@app.route("/pending/", methods=['GET', 'POST'])  # admin adding or deleting accounts
 @admin_login_required  # must be logged in as admin to access this page!
 def admin():
     if request.method == 'POST':
@@ -877,7 +877,7 @@ def messageSU():
         return render_template('message.html', msg="SENT")
     return render_template('message.html')
 
-@app.route("/adminMessages", methods=['GET','POST'])
+@app.route("/adminMessages/", methods=['GET','POST'])
 @admin_login_required
 def adminMessages():
     if request.method == 'POST':
@@ -903,7 +903,7 @@ def adminMessages():
 
 
 
-@app.route("/allUsers", methods=['GET', 'POST'])
+@app.route("/allUsers/", methods=['GET', 'POST'])
 @admin_login_required
 def adminEdit():
     if request.method == "POST":
