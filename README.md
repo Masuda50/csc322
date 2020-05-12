@@ -66,7 +66,7 @@ In doing so, any changes you make will be reflected upon refreshing the browser,
 
 # File Structure & Setup
 **Each file will contain the following:**
-* \\-- vestigia
+* \\-- WhiteBoard
    <br> &emsp; &emsp;|-- main.py
   * &emsp;\\-- static
     <br> &emsp;&emsp; &emsp;|-- style.css
@@ -78,7 +78,16 @@ In doing so, any changes you make will be reflected upon refreshing the browser,
     <br> &emsp;&emsp; &emsp; |-- profile.html
     <br> &emsp;&emsp; &emsp; |-- layout.html 
     <br> &emsp;&emsp; &emsp; |-- reply.html 
-    <br> &emsp;&emsp; &emsp; |-- post.html     
+    <br> &emsp;&emsp; &emsp; |-- admin.html
+    <br> &emsp;&emsp; &emsp; |-- group.html
+    <br> &emsp;&emsp; &emsp; |-- allUsers.html
+    <br> &emsp;&emsp; &emsp; |-- appeal.html
+    <br> &emsp;&emsp; &emsp; |-- close_group.html
+    <br> &emsp;&emsp; &emsp; |-- message.html
+    <br> &emsp;&emsp; &emsp; |-- reset_password.html
+    <br> &emsp;&emsp; &emsp; |-- adminMessages.html
+    <br> &emsp;&emsp; &emsp; |-- 404.html
+    <br> &emsp;&emsp; &emsp; |-- pending.html
  -
   - main.py — This will be our main project file, all our Python code will be in this file (Routes, MySQL connection, validation, etc).
   - index.html — home page created with HTML5 and CSS3.
