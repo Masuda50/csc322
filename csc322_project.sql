@@ -62,12 +62,12 @@ create table tb_profile (
 
 insert into tb_profile (user_id, user_type, user_scores) values
 (100,'Super User', 100),
-(101, 'Ordinary', 20),
-(102, 'Ordinary', 10),
-(103, 'SuperUser', 30),
-(104, 'SuperUser', 25),
-(105, 'Ordinary', 5),
-(106, 'SuperUser',35);
+(101, 'Ordinary', 26),
+(102, 'Ordinary', 26),
+(103, 'VIP', 30),
+(104, 'VIP', 24),
+(105, 'Ordinary', 25),
+(106, 'VIP',35);
 
 create table tb_whitelist (
     user_id INT,
@@ -99,8 +99,7 @@ ALTER TABLE tb_taboo auto_increment = 1;
 insert into tb_taboo (word_id, word) values
 (1, 'fuck'),
 (2, 'stupid'),
-(3, 'shit'),
-(4, 'fk');
+(3, 'shit');
 
 -- create table user taboo 
 create table tb_user_taboo (

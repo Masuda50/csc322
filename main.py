@@ -211,6 +211,21 @@ def home():
     # flag general post, since we need to show the top 3 rated post, we add the flag at the 4th post
     if len(post) > 3:
         post[3]['flag'] = 1
+
+    # find all ordinary users who scores > 25
+    cursor.execute('SELECT * FROM tb_profile WHERE user_type = "Ordinary" AND user_scores > 25')
+    ou_vip = cursor.fetchall()
+    for i in range(len(ou_vip)):
+        # update to be VIP
+        cursor.execute('UPDATE tb_profile SET user_type = %s WHERE user_id = %s', ('VIP', ou_vip[i]['user_id']))
+        mysql.connection.commit()
+    # find all VIP who scores < 25
+    cursor.execute('SELECT * FROM tb_profile WHERE user_type = "VIP" AND user_scores < 25')
+    vip_ou = cursor.fetchall()
+    for i in range(len(vip_ou)):
+        # demote to be Ordinary user
+        cursor.execute('UPDATE tb_profile SET user_type = %s WHERE user_id = %s', ('Ordinary', vip_ou[i]['user_id']))
+        mysql.connection.commit()
     # Select all ordinary user profiles and sort by scores
     cursor.execute('SELECT tb_user.*, tb_profile.user_type, tb_profile.user_scores FROM tb_user INNER JOIN tb_profile '
                    'ON tb_user.user_id = tb_profile.user_id WHERE tb_profile.user_type = "Ordinary" order by '
@@ -226,22 +241,22 @@ def home():
             top_OU = top_OU[:3]
     # Select all super user profiles and sort by scores
     cursor.execute('SELECT tb_user.*, tb_profile.user_type, tb_profile.user_scores FROM tb_user INNER JOIN tb_profile '
-                   'ON tb_user.user_id = tb_profile.user_id WHERE tb_profile.user_type = "SuperUser" order by '
+                   'ON tb_user.user_id = tb_profile.user_id WHERE tb_profile.user_type = "VIP" order by '
                    '-tb_profile.user_scores ')
-    top_SU = cursor.fetchall()
+    top_VIP = cursor.fetchall()
     # if exist super user profiles
-    if top_SU:
+    if top_VIP:
         # if total super users < 3, only show their profiles
-        if len(top_SU) < 3:
-            top_SU = top_SU[:len(top_SU)]
+        if len(top_VIP) < 3:
+            top_VIP = top_VIP[:len(top_VIP)]
         # otherwise, show the top 3 rated super users' profiles
         else:
-            top_SU = top_SU[:3]
+            top_VIP = top_VIP[:3]
 
     if post:
-        return render_template('index.html', post=post, top_SU=top_SU, top_OU=top_OU)
+        return render_template('index.html', post=post, top_VIP=top_VIP, top_OU=top_OU)
 
-    return render_template('index.html', top_SU=top_SU, top_OU=top_OU)
+    return render_template('index.html', top_VIP=top_VIP, top_OU=top_OU)
 
 
 #  link the post_content to the reply page
@@ -543,6 +558,22 @@ def profile():
         cursor.execute('SELECT user_name_blocked FROM tb_user_blacklist WHERE user_id = %s', [session['user_id']])
         blocked = cursor.fetchall()
         # Show the profile page with account info
+
+        # find all ordinary users who scores > 25
+        cursor.execute('SELECT * FROM tb_profile WHERE user_type = "Ordinary" AND user_scores > 25')
+        ou_vip = cursor.fetchall()
+        for i in range(len(ou_vip)):
+            # update to be VIP
+            cursor.execute('UPDATE tb_profile SET user_type = %s WHERE user_id = %s', ('VIP', ou_vip[i]['user_id']))
+            mysql.connection.commit()
+        # find all VIP who scores < 25
+        cursor.execute('SELECT * FROM tb_profile WHERE user_type = "VIP" AND user_scores < 25')
+        vip_ou = cursor.fetchall()
+        for i in range(len(vip_ou)):
+            # demote to be Ordinary user
+            cursor.execute('UPDATE tb_profile SET user_type = %s WHERE user_id = %s',
+                           ('Ordinary', vip_ou[i]['user_id']))
+            mysql.connection.commit()
         return render_template('profile.html', account=account, post_history=post_history, group_info=group_info,
                                invitation=invitation, friends=friends, blocked=blocked)
     # User is not loggedin redirect to login page
@@ -559,7 +590,6 @@ def poster_profile(poster_id):
                    ' FROM tb_user INNER JOIN tb_profile ON'
                    ' tb_profile.user_id = tb_user.user_id WHERE tb_user.user_id = %s', (poster_id,))
     account = cursor.fetchone()
-
     if not account:
         flash("User doesn't exist")
         return redirect(url_for('home'))
@@ -576,6 +606,21 @@ def poster_profile(poster_id):
                    ' tb_group_members.user_name = tb_user.user_name WHERE tb_user.user_id = %s', (poster_id,))
 
     others_group_info = cursor.fetchall()
+    # find all ordinary users who scores > 25
+    cursor.execute('SELECT * FROM tb_profile WHERE user_type = "Ordinary" AND user_scores > 25')
+    ou_vip = cursor.fetchall()
+    for i in range(len(ou_vip)):
+        # update to be VIP
+        cursor.execute('UPDATE tb_profile SET user_type = %s WHERE user_id = %s', ('VIP', ou_vip[i]['user_id']))
+        mysql.connection.commit()
+    # find all VIP who scores < 25
+    cursor.execute('SELECT * FROM tb_profile WHERE user_type = "VIP" AND user_scores < 25')
+    vip_ou = cursor.fetchall()
+    for i in range(len(vip_ou)):
+        # demote to be Ordinary user
+        cursor.execute('UPDATE tb_profile SET user_type = %s WHERE user_id = %s',
+                       ('Ordinary', vip_ou[i]['user_id']))
+        mysql.connection.commit()
     return render_template('profile.html', poster_account=account, post_history=post_history,
                            others_group_info=others_group_info)
 
@@ -671,13 +716,11 @@ def post():
 # delete post
 @app.route('/<post_id>/')
 def delete_post(post_id):
-    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    print('p_id', post_id)
-    cursor.execute('DELETE FROM tb_post WHERE post_id = %s', (post_id,))
-    mysql.connection.commit()
-    return redirect(url_for('profile'))
-
-
+    if request.method == 'POST':
+        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+        cursor.execute('DELETE FROM tb_post WHERE post_id = %s', (post_id,))
+        mysql.connection.commit()
+        return redirect(url_for('profile'))
 
 
 # search bar
@@ -738,7 +781,6 @@ def into_group(group_id):
                    ' ON tb_group.group_id = tb_group_members.group_id WHERE tb_group.group_id = %s', (group_id,))
 
     group = cursor.fetchone()
-    print('group', group)
     # get the group members' information: user_name, user_id
     cursor.execute('SELECT tb_group_members.*, tb_user.user_id FROM tb_group_members INNER JOIN tb_user '
                    'ON tb_group_members.user_name = tb_user.user_name WHERE'

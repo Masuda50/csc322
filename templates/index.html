@@ -22,26 +22,26 @@
 <div class="container clearfix">
     <div class="left-home"> <!-- left side start-->
         <h2>Top Super User Profile</h2>
-        {% if top_SU %}
-            {% for su in top_SU %}
+        {% if top_VIP %}
+            {% for vip in top_VIP %}
                 <div class="top-user">
                     <table>
                         <tr>
                             <td>Username:</td>
-                            <td><a href="{{ url_for('poster_profile', poster_id=su.user_id) }}">
-                                {{ su.user_name }}</a></td>
+                            <td><a href="{{ url_for('poster_profile', poster_id=vip.user_id) }}">
+                                {{ vip.user_name }}</a></td>
                         </tr>
                         <tr>
                             <td>User Type:</td>
-                            <td>{{ su.user_type }}</td>
+                            <td>{{ vip.user_type }}</td>
                         </tr>
                         <tr>
                             <td>Reputation:</td>
-                            <td>&nbsp;{{ su.user_scores }}</td>
+                            <td>&nbsp;{{ vip.user_scores }}</td>
                         </tr>
                         <tr>
                             <td>Email:</td>
-                            <td>{{ su.email }}</td>
+                            <td>{{ vip.email }}</td>
                         </tr>
                     </table>
                     <hr>
@@ -50,7 +50,7 @@
             {% endfor %}
 
         {% else %}
-            <h4>Current No Super User Profile</h4>
+            <h4>Current No VIP Profile</h4>
             <hr>
         {% endif %}
 
