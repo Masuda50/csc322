@@ -32,7 +32,7 @@ app.secret_key = '111'
 # Enter your database connection details below
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = '111111'
+app.config['MYSQL_PASSWORD'] = 'root'
 app.config['MYSQL_DB'] = 'csc322_project'
 
 # Intialize MySQL
@@ -1118,16 +1118,35 @@ def into_group(group_id):
                         mysql.connection.commit()
                         # auto reload
                     elif group_vote['vote_subject'] == 'warning' and group_vote['group_vote_status'] == 'open':
-                        cursor.execute(
-                            'UPDATE tb_group_members SET user_warnings = user_warnings + 1 where user_id = %s',
-                            (user_id,))
-                        cursor.execute('UPDATE tb_group_votes SET group_vote_status = %s WHERE group_vote_id = %s',
-                                       ('closed', group_vote['group_vote_id']))
-                        mysql.connection.commit()
+                        # check if user has >= 3 warnings
+                        cursor.execute('SELECT user_warnings FROM tb_group_members WHERE group_id = %s AND user_id = %s', (group_id, user_id,))
+                        user_warnings = cursor.fetchone()
+                        print('-------USER WARNINGS--------')
+                        print(user_warnings)
+
+                        if user_warnings['user_warnings'] == 2:
+                            # remove and deduct points to the user
+                            cursor.execute('DELETE FROM tb_group_members WHERE user_id = %s AND group_id = %s',
+                                           (user_id, group_id,))
+                            # deduct 5 points to user
+                            cursor.execute('UPDATE tb_profile SET user_scores = user_scores - 5 WHERE user_id = %s', (user_id,))
+
+                            cursor.execute('UPDATE tb_group_votes SET group_vote_status = %s WHERE group_vote_id = %s',
+                                           ('closed', group_vote['group_vote_id']))
+
+                            mysql.connection.commit()
+                        else:
+                            cursor.execute(
+                                'UPDATE tb_group_members SET user_warnings = user_warnings + 1 where user_id = %s',
+                                (user_id,))
+                            cursor.execute('UPDATE tb_group_votes SET group_vote_status = %s WHERE group_vote_id = %s',
+                                           ('closed', group_vote['group_vote_id']))
+                            mysql.connection.commit()
                         # else, user will get removed from the group
                     elif group_vote['vote_subject'] == 'user_removal' and group_vote['group_vote_status'] == 'open':
                         cursor.execute('DELETE FROM tb_group_members WHERE user_id = %s AND group_id = %s',
                                        (user_id, group_id,))
+                        cursor.execute('UPDATE tb_profile SET user_scores = user_scores - 10 WHERE user_id = %s', (user_id,))
                         cursor.execute('UPDATE tb_group_votes SET group_vote_status = %s WHERE group_vote_id = %s',
                                        ('closed', group_vote['group_vote_id']))
 
