@@ -65,12 +65,12 @@ create table tb_profile (
 
 insert into tb_profile (user_id, user_type, user_scores) values
 (100,'SuperUser', 100),
-(101, 'Ordinary', 20),
+(101, 'Ordinary', 26),
 (102, 'Ordinary', 10),
-(103, 'SuperUser', 30),
-(104, 'SuperUser', 25),
+(103, 'VIP', 30),
+(104, 'VIP', 24),
 (105, 'Ordinary', 5),
-(106, 'SuperUser',35);
+(106, 'VIP',35);
 
 create table tb_whitelist (
     user_id INT,
