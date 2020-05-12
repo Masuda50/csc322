@@ -23,15 +23,16 @@ insert into tb_applied (username, email,interest,credential,reference) values
     
 --  create table user
 CREATE TABLE tb_user ( 
-	user_id INT AUTO_INCREMENT,
+    user_id INT AUTO_INCREMENT,
     user_name VARCHAR(50) NOT NULL,
     user_password VARCHAR(50) NOT NULL ,
-	email VARCHAR(100) NOT NULL ,
+    email VARCHAR(100) NOT NULL ,
     didtheychangepass BOOLEAN NOT NULL DEFAULT 0 ,
     interest VARCHAR(50) ,
     credential VARCHAR(50),
-	PRIMARY KEY (user_id)
-	);
+    reference VARCHAR(50),
+    PRIMARY KEY (user_id)
+    );
     
 -- setting user_id auto increment from 100
 ALTER TABLE tb_user AUTO_INCREMENT = 100;
@@ -48,7 +49,9 @@ insert into tb_user (user_name, user_password,  email, didtheychangepass) values
 
 
 CREATE TABLE tb_blacklist ( 
-    email VARCHAR(100) NOT NULL 
+    email VARCHAR(100) NOT NULL,
+    lastlogin INT default 1,  -- one means they have one more login before they are kicked out forver 
+    PRIMARY KEY (email)
     );
 
 -- create table profile
@@ -61,13 +64,13 @@ create table tb_profile (
     );
 
 insert into tb_profile (user_id, user_type, user_scores) values
-(100,'Super User', 100),
-(101, 'Ordinary', 26),
-(102, 'Ordinary', 26),
-(103, 'VIP', 30),
-(104, 'VIP', 24),
-(105, 'Ordinary', 25),
-(106, 'VIP',35);
+(100,'SuperUser', 100),
+(101, 'Ordinary', 20),
+(102, 'Ordinary', 10),
+(103, 'SuperUser', 30),
+(104, 'SuperUser', 25),
+(105, 'Ordinary', 5),
+(106, 'SuperUser',35);
 
 create table tb_whitelist (
     user_id INT,
@@ -141,6 +144,7 @@ create table tb_group (
     group_name varchar(50),
     group_describe text,
     group_created_time timestamp default current_timestamp,
+    group_status varchar(50) default 'active',
     user_id int,
     primary key (group_id),
     foreign key (user_id) references tb_user (user_id)
@@ -154,11 +158,38 @@ insert into tb_group (group_id, group_name, group_describe, user_id) values
 create table tb_group_members (
 	group_id int,
     user_name varchar(50),
-    foreign key (group_id) references tb_group (group_id)
+    user_id int NOT NULL,
+    user_warnings int default 0,
+    user_praises int default 0,
+    foreign key (group_id) references tb_group (group_id),
+    foreign key (user_id) references tb_user(user_id)
 );
 
-insert into tb_group_members (group_id, user_name) values
-(1000, 'test4');
+insert into tb_group_members (group_id, user_name, user_id) values
+(1000, 'test4', 104);
+
+create table tb_message_su (
+    message_id INT auto_increment,
+    message_name VARCHAR(100),
+    message_content text,
+    primary key (message_id)
+);
+
+create table tb_compliments (
+    compliment_id INT auto_increment,
+    compliment_sender INT,
+    compliment_content text,
+    compliment_getter INT,
+    primary key (compliment_id),
+    foreign key (compliment_getter) references tb_user(user_id)
+);
+
+insert into tb_message_su (message_name, message_content) values
+('Reminder for Super Users', 'Please make sure to thorougly read and investigate each claim made in order to ensure the best user expirence for all the users Whiteboard.');
+
+insert into tb_compliments (compliment_content) values
+("If the Sender value is NONE, it means a visitor send the compliments - compliments of a visitor mean less than compliments sent from a user");
+
 
 
 -- create table chat
@@ -177,6 +208,8 @@ create table tb_poll (
     poll_title varchar(50),
     poll_body varchar(100),
     poll_status int default 1,
+    highest_vote varchar(100) default NULL,
+    vote_count int default 0,
     created_by int,
     poll_creation timestamp default current_timestamp,
     group_id int,
@@ -235,4 +268,60 @@ END$$
 DELIMITER ;
 
 CALL insert_poll_options('Python,JavaScript,Ruby,Go,C++', 1);
+
+
+-- create groupmember user evaluation system table
+CREATE TABLE tb_user_evaluations (
+	user_eval_id int auto_increment,
+	group_id int NOT NULL,
+    rater_id int NOT NULL,
+    evaluation_score int NOT NULL,
+    user_id int NOT NULL,
+    foreign key (group_id) references tb_group(group_id),
+    foreign key (rater_id) references tb_user(user_id),
+    foreign key (user_id) references tb_user(user_id),
+    primary key (user_eval_id)
+);
+
+-- create project evaluation system table
+CREATE TABLE tb_project_evaluations (
+	project_eval_id int auto_increment,
+    project_open_reason varchar(100) NOT NULL,
+    project_close_reason varchar(100) NOT NULL,
+    group_id int NOT NULL,
+    project_rating int default NULL,
+    evaluator_id int default NULL,
+    primary key (project_eval_id),
+    foreign key (group_id) references tb_group(group_id),
+    foreign key (evaluator_id) references tb_user(user_id)
+);
+
+-- create group_vote table - not related to polls / user related votes
+CREATE TABLE tb_group_votes (
+	group_vote_id int auto_increment,
+    group_id int NOT NULL,
+    vote_subject varchar(50) NOT NULL,
+    user_subject int,
+    user_id int NOT NULL,
+    highest_vote varchar(50) default NULL,
+    vote_count int default 0,
+    group_vote_status varchar(50) default 'open',
+    primary key (group_vote_id),
+    foreign key (group_id) references tb_group(group_id),
+    foreign key (user_id) references tb_user(user_id)
+);
+
+-- create table with group_vote_responses
+CREATE TABLE tb_group_vote_responses (
+	group_vote_response_id int auto_increment,
+    group_vote_id int NOT NULL,
+    group_id int NOT NULL,
+    voter_id int NOT NULL,
+    vote_response varchar(50) NOT NULL,
+    primary key (group_vote_response_id),
+    foreign key (group_vote_id) references tb_group_votes(group_vote_id),
+    foreign key (group_id) references tb_group(group_id),
+    foreign key (voter_id) references tb_user(user_id)
+);
+
 
