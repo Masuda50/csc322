@@ -612,6 +612,8 @@ def profile():
                     cursor.execute('SELECT * from tb_user_evaluation_status WHERE user_id = %s AND group_id = %s',
                                    (session['user_id'], user_evaluation_group_id[i]['group_id'],))
                     already_added = cursor.fetchone()
+                    print('-----------already adddeddddd-------')
+                    print(already_added)
                     if already_added:
                         print('User already has evaluation score reflected in their reputation score!')
                     else:
@@ -1484,7 +1486,8 @@ def close_group(group_id):
         print('--------------EVALUATED GROUP MEMBERS-----------')
         print(group_members)
 
-        for i in range(0, len(userRatings)):
+
+        for i in range(0, len(group_members)):
             print(group_members[i]['user_name'], userRatings[str(i)])
 
 
@@ -1502,12 +1505,9 @@ def close_group(group_id):
             # set group_status in tb_group given group_name to 'inactive'
             # cursor.execute('UPDATE tb_group SET group_status = %s WHERE group_id = %s', ('inactive', group_id,))
 
-            # insert project evaluation into tb_project_evaluations
-            cursor.execute('INSERT INTO tb_project_evaluations (project_open_reason, project_close_reason, group_id) VALUES (%s, %s, %s)', (open_reason, close_reason, group_id,))
-
             mysql.connection.commit();
 
-            return jsonify(result)
+        return jsonify(result)
 
     return render_template('close_group.html', group_id=group_id, group_members=group_members)
 
