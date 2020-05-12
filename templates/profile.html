@@ -104,22 +104,9 @@
                         {{ name.group_name }}
                 </button></a>
             {% endfor %}
-            {% else %}
-            <a>You are currently not in any active groups...</a>
         {% endif %}
-        <hr>
-        <h4 style="color: #4a536e; font-size: 22px;">My Completed Groups</h4>
-            {% if completed_projects %}
-                {% for project in completed_projects %}
-                    <a href="{{ url_for('into_group', group_id=project.group_id) }}">
-                    <button class="btn btn-success" style="font-size: 15px; width: 200px;
-                     margin:10px 20px; word-break: break-all; height: 100px; ">
-                            {{ project.group_name }}
-                    </button></a>
-                {% endfor %}
-                {% else %}
-                <a>You currently don't have any completed projects/groups...</a>
-            {% endif %}
+
+
         <hr>
 
         <button class="btn btn-primary btn-lg" data-toggle="modal" data-target="#myModal">
