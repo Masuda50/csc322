@@ -32,7 +32,7 @@ app.secret_key = '111'
 # Enter your database connection details below
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = 'root'
+app.config['MYSQL_PASSWORD'] = '111111'
 app.config['MYSQL_DB'] = 'csc322_project'
 
 # Intialize MySQL
@@ -572,89 +572,30 @@ def profile():
         # We need all the account info for the user so we can display it on the profile page
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
-        # ==============================EVALUATION SCORES===================================
-        # get group_id where user evals are still pending
-        cursor.execute('SELECT group_id FROM tb_user_evaluations WHERE user_id = %s AND evaluation_status = %s',
-                       (session['user_id'], 'pending',))
-        user_evaluation_group_id = cursor.fetchall()
-        # user_evaluation_group_id[0]['group_id']
+        # get all NEW user group evaluations that are still pending
+        cursor.execute('SELECT user_eval_id, evaluation_score from tb_user_evaluations where user_id = %s',
+                       (session['user_id'],))
+        user_scores = cursor.fetchall()
+        # print('Pending User Evaluations...', user_scores)
 
-        # if user evaluations exists where
-        if user_evaluation_group_id:
-            print('Pending Evaluation for User obtained: ', user_evaluation_group_id)
+        user_score = 0
+        total_score = 0
 
-            for i in range(0, len(user_evaluation_group_id)):
+        # if evaluations_scores exist, add all of them up and divide by length of user_scores
+        if (user_scores):
+            for i in range(0, len(user_scores)):
+                total_score += user_scores[i]['evaluation_score']
+                # update evaluation_status to finished - evaluating
+                # cursor.execute('UPDATE tb_user_evaluations SET evaluation_status = %s WHERE user_eval_id = %s', ('evaluated', user_scores[i]['user_eval_id'],))
 
-                # get total group members to complete close group form and find median of evaluated scores
-                cursor.execute('SELECT user_id FROM tb_group_members WHERE group_id = %s ',
-                               (user_evaluation_group_id[i]['group_id'],))
-                total_group_members = cursor.fetchall()
-                print('Total Group Members to Close Group and Evaluate User Scores: ', total_group_members)
+            user_score = round(total_score / len(user_scores))
 
-                # check if total group members exist in tb_user_evaluation - that means user_eval scores are ready to be averaged into specific user in the group
-                cursor.execute(
-                    'SELECT rater_id from tb_user_evaluations where group_id = %s and evaluation_status = %s group by rater_id',
-                    (user_evaluation_group_id[i]['group_id'], 'pending',))
-                evaluated_group_members = cursor.fetchall()
-                print('Users who have evaluated other users in group: ', evaluated_group_members)
+            print(user_score)
 
-                if len(total_group_members) == len(evaluated_group_members):
-                    print('All users have evaluated! Get the median of your evaluated scores!')
-
-                    # get all evaluation scores from user's group mates
-                    cursor.execute(
-                        'SELECT evaluation_score FROM tb_user_evaluations WHERE user_id = %s AND evaluation_status = %s',
-                        (session['user_id'], 'pending',))
-                    all_evaluation_scores = cursor.fetchall()
-                    print(all_evaluation_scores)
-
-                    # check if user already has score evaluated
-                    cursor.execute('SELECT * from tb_user_evaluation_status WHERE user_id = %s AND group_id = %s',
-                                   (session['user_id'], user_evaluation_group_id[i]['group_id'],))
-                    already_added = cursor.fetchone()
-                    if already_added:
-                        print('User already has evaluation score reflected in their reputation score!')
-                    else:
-                        total_score = 0
-
-                        # take median of all scores and update value to user reputation score
-                        for j in range(0, len(all_evaluation_scores)):
-                            total_score += all_evaluation_scores[j]['evaluation_score']
-
-                        # print('Users total score: ', total_score)
-                        user_score = round(total_score / len(all_evaluation_scores))
-                        print('Median User Evaluations:', user_score)
-
-                        # update new rep score to user
-                        cursor.execute('UPDATE tb_profile SET user_scores = user_scores + %s WHERE user_id = %s',
-                                       (user_score, session['user_id']))
-
-                        # insert eval_status for user in tb_user_evaluation_status
-                        cursor.execute('INSERT INTO tb_user_evaluation_status (group_id, user_id) VALUES (%s, %s)',
-                                       (user_evaluation_group_id[i]['group_id'], session['user_id'],))
-
-                    user_score_added = 0
-
-                    # if total_group_members in tb_user_evaluation_status - set evaluation_status to 'complete'
-                    for k in range(0, len(total_group_members)):
-                        cursor.execute('SELECT * from tb_user_evaluation_status WHERE user_id = %s',
-                                       (total_group_members[k]['user_id'],))
-                        score_added = cursor.fetchone()
-                        if not score_added:
-                            print('Not all user has had their scores added to their reputation score')
-                        else:
-                            user_score_added += 1
-
-                    if user_score_added == len(total_group_members):
-                        # if all user scores are added to their profile
-                        # set all evaluation to 'evaluated'
-                        cursor.execute('UPDATE tb_user_evaluations SET evaluation_status = %s WHERE group_id = %s',
-                                       ('evaluated', user_evaluation_group_id[i]['group_id'],))
-
-                    mysql.connection.commit()
-
-                else:
-                    print('Not All users have evaluated!')
+            # update user_score in tb_user
+            cursor.execute('UPDATE tb_profile SET user_scores = user_scores + %s WHERE user_id = %s',
+                           (user_score, session['user_id']))
+            mysql.connection.commit()
 
         # join table profile and table user to get user information: id, name, email, user_type, user_scores,
         cursor.execute('SELECT tb_profile.*, tb_user.user_name, tb_user.email'
@@ -1015,9 +956,13 @@ def into_group(group_id):
         # =========================Group Vote=============================
 
     # get all unresponded user group votes
-
+<<<<<<< HEAD
     cursor.execute('select group_vote_id, vote_subject, user_subject, user_id from tb_group_votes where (group_vote_id not in (select group_vote_id from tb_group_vote_responses where group_id = %s and voter_id = %s) and group_vote_status = %s and group_id=%s)',(group_id, session['user_id'], 'open', group_id))
-
+=======
+    cursor.execute(
+        'select group_vote_id, vote_subject, user_subject, user_id from tb_group_votes where (group_vote_id not in (select group_vote_id from tb_group_vote_responses where group_id = %s and voter_id = %s) and group_vote_status = %s)',
+        (group_id, session['user_id'], 'open',))
+>>>>>>> 4831a1acf7a84e7be25b8f15b19370c744d7cfd4
     all_group_votes = cursor.fetchall()
     print('----------ALL UNRESPONDED GROUP VOTES---------')
     print(all_group_votes)
@@ -1486,17 +1431,42 @@ def close_group(group_id):
 
         for i in range(0, len(userRatings)):
             print(group_members[i]['user_name'], userRatings[str(i)])
+<<<<<<< HEAD
+            cursor.execute('INSERT INTO tb_user_evaluations (group_id, rater_id, evaluation_score, user_id) VALUES (%s, %s, %s, %s)', (group_id, session['user_id'], userRatings[str(i)], group_members[i]['user_id']))
 
-
+            # if wb_bb_response == 'Whitelist' add user to whitebox
+            if wb_bb_response[i] == 'Whitelist':
+                # check if user already exists in whitelist
+                cursor.execute('SELECT * from tb_whitelist WHERE user_name_friend = %s AND user_id = %s', (group_members[i]['user_name'], session['user_id'],))
+                user_wb_exist = cursor.fetchone
+                print(user_wb_exist)
+=======
             cursor.execute(
                 'INSERT INTO tb_user_evaluations (group_id, rater_id, evaluation_score, user_id) VALUES (%s, %s, %s, %s)',
                 (group_id, session['user_id'], userRatings[str(i)], group_members[i]['user_id']))
+>>>>>>> 4831a1acf7a84e7be25b8f15b19370c744d7cfd4
 
+                # check if user exists in blacklist
+                cursor.execute('SELECT * from tb_user_blacklist WHERE user_name_blocked = %s', (group_members[i]['user_name'],))
+                user_bb_exist = cursor.fetchone()
 
-            # insert project evaluation into tb_project_evaluations
-            cursor.execute(
-                'INSERT INTO tb_project_evaluations (project_open_reason, project_close_reason, group_id) VALUES (%s, %s, %s)',
-                (open_reason, close_reason, group_id,))
+<<<<<<< HEAD
+                # if user_bb_exist:
+                #     # remove from user_id from blacklist and add to whitelist
+                #     cursor.execute('DELETE FROM tb_user_blacklist WHERE user_name_blocked = %s', (group_members[i]['user_name'],))
+=======
+        # insert project evaluation into tb_project_evaluations
+        cursor.execute(
+            'INSERT INTO tb_project_evaluations (project_open_reason, project_close_reason, group_id) VALUES (%s, %s, %s)',
+            (open_reason, close_reason, group_id,))
+>>>>>>> 4831a1acf7a84e7be25b8f15b19370c744d7cfd4
+
+                if user_wb_exist:
+                    print('User already exists in the Whitelist')
+                else:
+                    print('Inserting into rated user into whitelist!!')
+                    cursor.execute('INSERT INTO tb_whitelist (user_id, user_name_friend) VALUES (%s, %s)', (session['user_id'], group_members[i]['user_name'],))
+                    mysql.connection.commit();
 
 
             # set group_status in tb_group given group_name to 'inactive'

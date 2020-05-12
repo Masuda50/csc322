@@ -276,11 +276,22 @@ CREATE TABLE tb_user_evaluations (
 	group_id int NOT NULL,
     rater_id int NOT NULL,
     evaluation_score int NOT NULL,
+    evaluation_status varchar(50) default 'pending',
     user_id int NOT NULL,
     foreign key (group_id) references tb_group(group_id),
     foreign key (rater_id) references tb_user(user_id),
     foreign key (user_id) references tb_user(user_id),
     primary key (user_eval_id)
+);
+
+CREATE TABLE tb_user_evaluation_status (
+	user_eval_status_id int auto_increment,
+    group_id int NOT NULL,
+    user_id int unique,
+    eval_score_added varchar(50) default 'true',
+    primary key (user_eval_status_id),
+    foreign key (group_id) references tb_group(group_id),
+    foreign key (user_id) references tb_user(user_id)
 );
 
 -- create project evaluation system table
