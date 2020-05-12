@@ -32,7 +32,7 @@ app.secret_key = '111'
 # Enter your database connection details below
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = 'root'
+app.config['MYSQL_PASSWORD'] = 'Bang1adesh'
 app.config['MYSQL_DB'] = 'csc322_project'
 
 # Intialize MySQL
@@ -1574,6 +1574,12 @@ def adminEdit():
             msg = Message("We are sorry to see you go!", recipients=[email])
             msg.body = "Due to your behaviour, you have been blacklisted. You have one login left for you process before you are locked out from Whiteboard forever."
             mail.send(msg)
+        elif 'ShutDownGroup' in request.form:
+            group_id = request.form['group_id']
+            cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+            cursor.execute('INSERT INTO tb_chat (user_id, group_id, chat_content) VALUES (%s, %s, %s)',
+                               ([session['user_id']], group_id, "The Super Users have decided to shut down this group - you have a day for processing, then we ask you to initiate a shutdown."))
+            mysql.connection.commit()
         # need to take care of group closings
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cursor.execute('SELECT tb_profile.*, tb_user.user_name, tb_user.email'
