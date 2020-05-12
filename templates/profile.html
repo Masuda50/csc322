@@ -43,6 +43,21 @@
             </tr>
         </table>
          <hr>
+
+           <h4>Write this user a compliment! </h4>
+</br>
+
+          <form action="{{ url_for('poster_profile',poster_id =poster_account.user_id ) }}" method="post" autocomplete="off">
+                
+                        <textarea name="content"  rows="2" placeholder="Enter your message here"
+                                  class="form-control" required></textarea>
+                                  </br>        
+                            <button class="btn btn-primary btn-block">Send</button>
+            </form>
+
+
+         <hr>
+         
         <h4 style="color: #4a536e; font-size: 22px;">This User's Groups</h4>
         {% if others_group_info %}
             {% for name in others_group_info %}
