@@ -958,7 +958,7 @@ def into_group(group_id):
     # get all unresponded user group votes
     cursor.execute(
         'select group_vote_id, vote_subject, user_subject, user_id from tb_group_votes where (group_vote_id not in (select group_vote_id from tb_group_vote_responses where group_id = %s and voter_id = %s) and group_vote_status = %s)',
-        (group_id, session['user_id'], 'open',))
+        (group_id, session.get('user_id'), 'open',))
     all_group_votes = cursor.fetchall()
 
     user_subject_username = []
@@ -983,7 +983,7 @@ def into_group(group_id):
     # get user's responded group votes
     cursor.execute(
         'select tb_group_votes.group_id, tb_group_votes.group_vote_id, tb_group_vote_responses.vote_response, tb_group_votes.vote_subject, tb_group_votes.user_subject, tb_group_votes.group_vote_status, tb_group_votes.highest_vote, tb_group_votes.vote_count from tb_group_votes join tb_group_vote_responses on tb_group_votes.group_vote_id = tb_group_vote_responses.group_vote_id where tb_group_vote_responses.voter_id = %s and tb_group_votes.group_id = %s',
-        (session['user_id'], group_id,))
+        (session.get('user_id'), group_id,))
     voted_group_votes = cursor.fetchall()
 
     # replace user_subject id with user_subject usernames
