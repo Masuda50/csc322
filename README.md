@@ -13,4 +13,23 @@ For a more indepth look into our system and its features, please take a look the
 
 How to run our system: 
 
+System requirments: 
 
+- Must have python version 2.7 or higher with its pip install feature 
+- Install Flask (pip install Flask)
+https://flask.palletsprojects.com/en/1.1.x/installation/
+*** you can choose to run this project on a virutal env created on your computer but it is not required 
+- Instal MYSQL Community Server and MYSQL Workbench (version 5.7)
+https://dev.mysql.com/downloads/
+video tutorial for reference: https://www.youtube.com/watch?v=UcpHkYfWarM&t=810s
+
+Flask dependicies that must be installed: 
+
+pip install flask_mail
+pip install flask_mysqldb 
+
+1. Clone the master branch of this repo 
+2. Once you have the MYSQL server running and you have created the root password, replace app.config['MYSQL_PASSWORD'] = 'xxxx' on line 35 of main.py with your root password 
+3. Load the mysql script enclosed into your MYSQL workbench and click the lightning to load the script 
+4. Once the tables and values are all loaded succesfully, in termial go into the cloned folder and run $python main.py 
+5. Access MYSQL default localhost (usually localhost:5000) through a browser, which will load WhiteBoard for viewing purposes
