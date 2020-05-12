@@ -93,7 +93,7 @@ In doing so, any changes you make will be reflected upon refreshing the browser,
 - Open Command Prompt, make sure you have the project directory selected, you can do this with the command cd c:\your_project_folder_destination\python main.py on Windows.
 
 # If you see the following information, you have successfully run the web application
-* Serving Flask app "test" (lazy loading)
+* Serving Flask app "main" (lazy loading)
  * Environment: production
    WARNING: Do not use the development server in a production environment.
    Use a production WSGI server instead.
