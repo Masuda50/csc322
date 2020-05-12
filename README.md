@@ -71,6 +71,15 @@ In doing so, any changes you make will be reflected upon refreshing the browser,
   - post.html - post page created with HTML5 and CSS3.
   - reply.html - reply page created with HTML5 and CSS3.
   - layout.html - The layout template for the home and profile templates.
+  - admin.html - The SuperUser management page created with HTML5 and CSS3.
+  - group.html - group page created with HTML5 and CSS3.
+  - appeal.html - appeal page created with HTML5 and CSS3.
+  - close-group.html - close group page created with HTML5 and CSS3
+  - message.html - message page created with HTML5 and CSS3
+  - reset_password.html - reset password page created with HTML5 and CSS3
+  - adminMessages.html - admin messages page created with HTML5 and CSS3
+  - pending.html - pending page created with HTML5 and CSS3
+  - 404.html - 404 page created with HTML5 and CSS3
 
 # The below instruction will start your web server (Windows):
 
@@ -79,7 +88,7 @@ In doing so, any changes you make will be reflected upon refreshing the browser,
 - app.secret_key = '111'
 - app.config['MYSQL_HOST'] = 'localhost'
 - app.config['MYSQL_USER'] = 'root'
-- app.config['MYSQL_PASSWORD'] = '111111'
+- app.config['MYSQL_PASSWORD'] = '111111' (YOUR SQL SERVER PASSWORD!!!)
 - app.config['MYSQL_DB'] = 'csc322_project'
 - Open Command Prompt, make sure you have the project directory selected, you can do this with the command cd c:\your_project_folder_destination\python main.py on Windows.
 
