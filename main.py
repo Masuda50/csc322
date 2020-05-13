@@ -1020,8 +1020,8 @@ def into_group(group_id):
 
     cursor.execute('select group_vote_id, vote_subject, user_subject, user_id from tb_group_votes where'
                    ' (group_vote_id not in (select group_vote_id from tb_group_vote_responses'
-                   ' where group_id = %s and voter_id = %s) and group_vote_status = %s)',
-                   (group_id, session.get('user_id'), 'open',))
+                   ' where group_id = %s and voter_id = %s) and group_vote_status = %s and group_id = %s)',
+                   (group_id, session.get('user_id'), 'open', group_id,))
 
     all_group_votes = cursor.fetchall()
     print('----------ALL UNRESPONDED GROUP VOTES---------')
@@ -1519,8 +1519,8 @@ def close_group(group_id):
 
             # insert project evaluation into tb_project_evaluations
             cursor.execute(
-                'INSERT INTO tb_project_evaluations (project_open_reason, project_close_reason, group_id) VALUES (%s, %s, %s)',
-                (open_reason, close_reason, group_id,))
+                'INSERT INTO tb_project_evaluations (project_open_reason, project_close_reason, group_id, user_id) VALUES (%s, %s, %s, %s)',
+                (open_reason, close_reason, group_id, group_members[i]['user_id']))
 
             if wb_bb_response[i] == 'Whitelist':
                 print(group_members[i]['user_name'], 'into Logged Users Whitelist')
