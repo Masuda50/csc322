@@ -14,9 +14,8 @@ For a more indepth look into our system and its features, please take a look the
 
 ![home page](screenshots/img1.png)
 
-![admin page](screenshots/img2.png)
 
-![profile page](screenshots/img3.png)
+![admin page](screenshots/img3.png)
 
 ================================================================================================================================
 
