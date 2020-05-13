@@ -10,6 +10,13 @@ This website will facilitate an active teaming of people with similar interest a
 
 For a more indepth look into our system and its features, please take a look the the project specification, design documents, and diagrams included in this repository. 
 
+#ScreenCaps 
+
+![home page](screenshots/img1.png)
+
+![admin page](screenshots/img2.png)
+
+![profile page](screenshots/img3.png)
 
 ================================================================================================================================
 
