@@ -244,7 +244,7 @@ def home():
     kick_out = cursor.fetchall()
     for i in range(len(kick_out)):
         cursor.execute('UPDATE tb_profile SET user_status = %s WHERE user_id = %s',
-                            ('\x00', kick_out[i]['user_id'])) 
+                            ('0', kick_out[i]['user_id'])) 
         #add to blacklist 
         cursor.execute('SELECT email FROM tb_user WHERE user_id = %s',((kick_out[i]['user_id']),))
         email = cursor.fetchone()
@@ -1621,13 +1621,16 @@ def adminEdit():
             user_id = request.form['user_id']
             email = request.form['email']
             cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-            cursor.execute('UPDATE tb_profile SET user_status = %s WHERE user_id = %s',
-                           ('\x00', user_id))
-            cursor.execute("INSERT INTO tb_blacklist (email)" "VALUES (%s)", (email,))
-            mysql.connection.commit()
-            msg = Message("We are sorry to see you go!", recipients=[email])
-            msg.body = "Due to your behaviour, you have been blacklisted. You have one login left for you process before you are locked out from Whiteboard forever."
-            mail.send(msg)
+            cursor.execute("SELECT * FROM tb_blacklist WHERE email =%s",(email,))
+            exist = cursor.fetchone()
+            if not exist:
+                cursor.execute('UPDATE tb_profile SET user_status = %s WHERE user_id = %s',
+                               ('0', user_id))
+                cursor.execute("INSERT INTO tb_blacklist (email)" "VALUES (%s)", (email,))
+                mysql.connection.commit()
+                msg = Message("We are sorry to see you go!", recipients=[email])
+                msg.body = "Due to your behaviour, you have been blacklisted. You have one login left for you process before you are locked out from Whiteboard forever."
+                mail.send(msg)
         elif 'ShutDownGroup' in request.form:
             group_id = request.form['group_id']
             cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
@@ -1658,7 +1661,7 @@ def adminEdit():
     kick_out = cursor.fetchall()
     for i in range(len(kick_out)):
         cursor.execute('UPDATE tb_profile SET user_status = %s WHERE user_id = %s',
-                            ('\x00', kick_out[i]['user_id'])) 
+                            ('0', kick_out[i]['user_id'])) 
         #add to blacklist 
         cursor.execute('SELECT email FROM tb_user WHERE user_id = %s',((kick_out[i]['user_id']),))
         email = cursor.fetchone()

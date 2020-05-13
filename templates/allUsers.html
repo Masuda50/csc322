@@ -29,10 +29,10 @@
      <td style="border: 1px solid black;">{{account.user_type}}</td>
       <td style="border: 1px solid black;">{{account.user_scores}}</td>
 
-      {%if account.user_status == "\x00" %}
-       <td style="border: 1px solid black;">Blacklisted</td>
+      {%if account.user_status == 0 %}
+        <td style="border: 1px solid black;">Blacklisted</td>
       {%else%}
-        <td style="border: 1px solid black;">Active</td>
+          <td style="border: 1px solid black;">Active</td>
       {%endif%}
 
    

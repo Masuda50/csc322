@@ -59,7 +59,7 @@ create table tb_profile (
 	user_id INT,
     user_type varchar (50)  default 'Ordinary',   -- 3 tpyes of users ordinary user, VIP, Super User,       -- 3 tpyes of users ordinary user, VIP, Super User 
     user_scores INT default 0,    -- user scores  default 0
-    user_status bit default 1,    -- only 0 or 1;  1 means good standing, 0 means have been banned(into black list) 
+    user_status INT default 1,    -- only 0 or 1;  1 means good standing, 0 means have been banned(into black list) 
     foreign key (user_id) references tb_user (user_id)
     );
 
