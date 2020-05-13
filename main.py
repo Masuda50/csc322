@@ -32,7 +32,7 @@ app.secret_key = '111'
 # Enter your database connection details below
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = 'root'
+app.config['MYSQL_PASSWORD'] = '111111'
 app.config['MYSQL_DB'] = 'csc322_project'
 
 # Intialize MySQL
@@ -857,9 +857,9 @@ def post():
 
 
 # delete post
-@app.route('/<post_id>/')
+@app.route('/profile/myProfile/<post_id>/')
 def delete_post(post_id):
-    if request.method == 'POST':
+    if request.method == 'GET':
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
         cursor.execute('DELETE FROM tb_post WHERE post_id = %s', (post_id,))
         mysql.connection.commit()
