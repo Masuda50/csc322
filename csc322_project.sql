@@ -299,10 +299,12 @@ CREATE TABLE tb_project_evaluations (
 	project_eval_id int auto_increment,
     project_open_reason varchar(100) NOT NULL,
     project_close_reason varchar(100) NOT NULL,
+    user_id int NOT NULL,
     group_id int NOT NULL,
     project_rating int default NULL,
     evaluator_id int default NULL,
     primary key (project_eval_id),
+    foreign key (user_id) references tb_user(user_id),
     foreign key (group_id) references tb_group(group_id),
     foreign key (evaluator_id) references tb_user(user_id)
 );
