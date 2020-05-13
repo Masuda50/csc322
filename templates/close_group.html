@@ -135,11 +135,9 @@
        event.preventDefault();
        let wbBBOptions = [];
        let checkboxes = $('input[name="wb-bb-option"]:checked').map(function() {
-          alert( $(this).val());
           wbBBOptions.push($(this).val());
         })
 
-       alert(wbBBOptions)
 
         //send userRating data array to flask route for data handling
         $.ajax({
@@ -153,7 +151,6 @@
                 wbBBOptions: wbBBOptions
             }),
             success: function(response){
-                console.log(response.url);
                 window.location.href = response.url
             },
             error: function(response){

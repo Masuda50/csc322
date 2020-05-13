@@ -584,10 +584,10 @@ def profile():
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
         # ==============================EVALUATION SCORES===================================
         # get group_id where user evals are still pending
-        cursor.execute('SELECT group_id FROM tb_user_evaluations WHERE user_id = %s AND evaluation_score = %s',
+        cursor.execute('SELECT group_id FROM tb_user_evaluations WHERE user_id = %s AND evaluation_status = %s',
                        (session.get('user_id'), 'pending',))
         user_evaluation_group_id = cursor.fetchall()
-        # user_evaluation_group_id[0]['group_id']
+        print(user_evaluation_group_id)
 
         # if user evaluations exists where
         if user_evaluation_group_id:
@@ -633,17 +633,17 @@ def profile():
                         for j in range(0, len(all_evaluation_scores)):
                             total_score += all_evaluation_scores[j]['evaluation_score']
 
-                        # print('Users total score: ', total_score)
-                        user_score = round(total_score / len(all_evaluation_scores))
-                        print('Median User Evaluations:', user_score)
+                            # print('Users total score: ', total_score)
+                            user_score = round(total_score / len(all_evaluation_scores))
+                            print('Median User Evaluations:', user_score)
 
-                        # update new rep score to user
-                        cursor.execute('UPDATE tb_profile SET user_scores = user_scores + %s WHERE user_id = %s',
-                                       (user_score, session['user_id']))
+                            # update new rep score to user
+                            cursor.execute('UPDATE tb_profile SET user_scores = user_scores + %s WHERE user_id = %s',
+                                           (user_score, session['user_id']))
 
-                        # insert eval_status for user in tb_user_evaluation_status
-                        cursor.execute('INSERT INTO tb_user_evaluation_status (group_id, user_id) VALUES (%s, %s)',
-                                       (user_evaluation_group_id[i]['group_id'], session['user_id'],))
+                            # insert eval_status for user in tb_user_evaluation_status
+                            cursor.execute('INSERT INTO tb_user_evaluation_status (group_id, user_id) VALUES (%s, %s)',
+                                           (user_evaluation_group_id[i]['group_id'], session['user_id'],))
 
                     user_score_added = 0
 
