@@ -32,7 +32,7 @@ app.secret_key = '111'
 # Enter your database connection details below
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = '111111'
+app.config['MYSQL_PASSWORD'] = 'Bang1adesh'
 app.config['MYSQL_DB'] = 'csc322_project'
 
 # Intialize MySQL
@@ -238,6 +238,17 @@ def home():
     for i in range(len(vip_ou)):
         # demote to be Ordinary user
         cursor.execute('UPDATE tb_profile SET user_type = %s WHERE user_id = %s', ('Ordinary', vip_ou[i]['user_id']))
+        mysql.connection.commit()
+    #kickout that has a negative repuation number 
+    cursor.execute('SELECT * FROM tb_profile WHERE user_status = 1 and user_scores < 0')
+    kick_out = cursor.fetchall()
+    for i in range(len(kick_out)):
+        cursor.execute('UPDATE tb_profile SET user_status = %s WHERE user_id = %s',
+                            ('\x00', kick_out[i]['user_id'])) 
+        #add to blacklist 
+        cursor.execute('SELECT email FROM tb_user WHERE user_id = %s',((kick_out[i]['user_id']),))
+        email = cursor.fetchone()
+        cursor.execute("INSERT INTO tb_blacklist (email, lastlogin)" "VALUES (%s,%s)", (email['email'],'0'))
         mysql.connection.commit()
     # Select all ordinary user profiles and sort by scores
     cursor.execute('SELECT tb_user.*, tb_profile.user_type, tb_profile.user_scores FROM tb_user INNER JOIN tb_profile '
