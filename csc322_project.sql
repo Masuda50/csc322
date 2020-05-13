@@ -287,7 +287,7 @@ CREATE TABLE tb_user_evaluations (
 CREATE TABLE tb_user_evaluation_status (
 	user_eval_status_id int auto_increment,
     group_id int NOT NULL,
-    user_id int unique,
+    user_id int NOT NULL,
     eval_score_added varchar(50) default 'true',
     primary key (user_eval_status_id),
     foreign key (group_id) references tb_group(group_id),
