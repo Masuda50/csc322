@@ -1636,7 +1636,35 @@ def adminEdit():
                             "The Super Users have decided to shut down this group - you have a day for processing, then we ask you to initiate a shutdown."))
             mysql.connection.commit()
         # need to take care of group closings
+
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+    # find all ordinary users who scores > 25
+    cursor.execute('SELECT * FROM tb_profile WHERE user_type = "Ordinary" AND user_scores > 25')
+    ou_vip = cursor.fetchall()
+    for i in range(len(ou_vip)):
+        # update to be VIP
+        cursor.execute('UPDATE tb_profile SET user_type = %s WHERE user_id = %s', ('VIP', ou_vip[i]['user_id']))
+        mysql.connection.commit()
+    # find all VIP who scores < 25
+    cursor.execute('SELECT * FROM tb_profile WHERE user_type = "VIP" AND user_scores < 25')
+    vip_ou = cursor.fetchall()
+    for i in range(len(vip_ou)):
+        # demote to be Ordinary user
+        cursor.execute('UPDATE tb_profile SET user_type = %s WHERE user_id = %s', ('Ordinary', vip_ou[i]['user_id']))
+        mysql.connection.commit()
+    #kickout that has a negative repuation number 
+    cursor.execute('SELECT * FROM tb_profile WHERE user_status = 1 and user_scores < 0')
+    kick_out = cursor.fetchall()
+    for i in range(len(kick_out)):
+        cursor.execute('UPDATE tb_profile SET user_status = %s WHERE user_id = %s',
+                            ('\x00', kick_out[i]['user_id'])) 
+        #add to blacklist 
+        cursor.execute('SELECT email FROM tb_user WHERE user_id = %s',((kick_out[i]['user_id']),))
+        email = cursor.fetchone()
+        cursor.execute("INSERT INTO tb_blacklist (email, lastlogin)" "VALUES (%s,%s)", (email['email'],'0'))
+        mysql.connection.commit()
+
     cursor.execute('SELECT tb_profile.*, tb_user.user_name, tb_user.email'
                    ' FROM tb_user INNER JOIN tb_profile ON tb_profile.user_id = tb_user.user_id')
     all_accounts = cursor.fetchall()
