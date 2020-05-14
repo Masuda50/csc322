@@ -18,6 +18,9 @@ For a more indepth look into our system and its features, please take a look the
 
 ![admin page](screenshots/img3.png)
 
+# For easy to test, here's test-user info 
+![login](https://user-images.githubusercontent.com/55426354/81879006-825c4580-9557-11ea-9f73-0d2acd9b0927.jpg)
+
 =============================================================================================================
 
 1. Clone this repository 
